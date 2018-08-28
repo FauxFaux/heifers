@@ -1,0 +1,10 @@
+[package]
+name = "heifers"
+version = "0.1.0"
+authors = ["Chris West (Faux) <git@goeswhere.com>"]
+
+[dependencies]
+byteorder = "1"
+cast = "0.2"
+failure = "0.1"
+more-asserts = "0.2"
