@@ -7,7 +7,6 @@ extern crate more_asserts;
 
 use std::io::Read;
 
-use cast::u64;
 use cast::usize;
 use failure::Error;
 
@@ -60,13 +59,13 @@ pub fn meta<R: Read>(mut from: R) -> Result<(), Error> {
             println!("{}: {:?}", box_data.limit(), child_header);
             let mut child_data = (&mut box_data).take(child_header.data_size());
             if mpeg::pack_box_type(*b"hdlr") == child_header.box_type {
-                println!("hdlr: {:?}", mpeg::parse_hdlr(&mut child_data)?);
+                println!("hdlr: {:?}", mpeg::meta::parse_hdlr(&mut child_data)?);
             } else if mpeg::pack_box_type(*b"pitm") == child_header.box_type {
-                println!("pitm: {:?}", mpeg::parse_pitm(&mut child_data)?);
+                println!("pitm: {:?}", mpeg::meta::parse_pitm(&mut child_data)?);
             } else if mpeg::pack_box_type(*b"iloc") == child_header.box_type {
-                println!("iloc: {:?}", mpeg::parse_iloc(&mut child_data)?);
+                println!("iloc: {:?}", mpeg::meta::parse_iloc(&mut child_data)?);
             } else if mpeg::pack_box_type(*b"iinf") == child_header.box_type {
-                println!("iinf: {:?}", mpeg::parse_iinf(&mut child_data)?);
+                println!("iinf: {:?}", mpeg::meta::parse_iinf(&mut child_data)?);
             } else {
                 // skip unrecognised
                 let remaining = usize(child_data.limit());
