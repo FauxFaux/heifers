@@ -58,7 +58,26 @@ pub fn meta<R: Read>(mut from: R) -> Result<(), Error> {
         while 0 != box_data.limit() {
             let child_header = mpeg::read_header(&mut box_data)?;
             println!("{}: {:?}", box_data.limit(), child_header);
-            dirty_skip(&mut box_data, &child_header)?;
+            let mut child_data = (&mut box_data).take(child_header.data_size());
+            if mpeg::pack_box_type(*b"hdlr") == child_header.box_type {
+                println!("hdlr: {:?}", mpeg::parse_hdlr(&mut child_data)?);
+            } else if mpeg::pack_box_type(*b"pitm") == child_header.box_type {
+                println!("pitm: {:?}", mpeg::parse_pitm(&mut child_data)?);
+            } else if mpeg::pack_box_type(*b"iloc") == child_header.box_type {
+                println!("iloc: {:?}", mpeg::parse_iloc(&mut child_data)?);
+            } else if mpeg::pack_box_type(*b"iinf") == child_header.box_type {
+                println!("iinf: {:?}", mpeg::parse_iinf(&mut child_data)?);
+            } else {
+                // skip unrecognised
+                let remaining = usize(child_data.limit());
+                child_data.read_exact(&mut vec![0u8; remaining])?;
+            }
+
+            ensure!(
+                0 == child_data.limit(),
+                "meta parser failed to parse a segment: {:?}",
+                child_header
+            );
         }
     }
 
