@@ -30,7 +30,6 @@ pub fn parse_hdlr<R: Read>(mut from: &mut Take<R>) -> Result<BoxType, Error> {
     from.read_exact(&mut [0u8; 4])?;
     let ret = BoxType(from.read_u32::<BE>()?);
     let remaining = usize(from.limit());
-    println!("{}", remaining);
     from.read_exact(&mut vec![0u8; remaining])?;
     Ok(ret)
 }

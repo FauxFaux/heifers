@@ -10,8 +10,7 @@ use cast::u8;
 use cast::usize;
 use failure::Error;
 
-use HeifError;
-
+pub mod iprp;
 pub mod meta;
 
 #[derive(Copy, Clone, Hash, Eq, PartialEq)]

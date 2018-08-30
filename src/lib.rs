@@ -9,14 +9,9 @@ use std::io::Read;
 
 use cast::usize;
 use failure::Error;
+use std::io::Take;
 
 pub mod mpeg;
-
-#[derive(Debug, Fail)]
-enum HeifError {
-    #[fail(display = "other invalid file: {}", msg)]
-    InvalidFile { msg: String },
-}
 
 pub fn meta<R: Read>(mut from: R) -> Result<(), Error> {
     {
@@ -40,7 +35,7 @@ pub fn meta<R: Read>(mut from: R) -> Result<(), Error> {
     }
 
     {
-        let mut header = mpeg::read_header(&mut from)?;
+        let header = mpeg::read_header(&mut from)?;
         // TODO: allow other headers before meta
         ensure!(
             mpeg::pack_box_type(*b"meta") == header.box_type,
@@ -48,28 +43,26 @@ pub fn meta<R: Read>(mut from: R) -> Result<(), Error> {
             header
         );
 
-        {
-            let _ = mpeg::read_full_box_header(&mut from)?;
-            header.offset += 4;
-        }
-
         let mut box_data = (&mut from).take(header.data_size());
+        let _ = mpeg::read_full_box_header(&mut box_data)?;
+
         while 0 != box_data.limit() {
             let child_header = mpeg::read_header(&mut box_data)?;
-            println!("{}: {:?}", box_data.limit(), child_header);
+            println!("| {}: {:?}", box_data.limit(), child_header);
             let mut child_data = (&mut box_data).take(child_header.data_size());
             if mpeg::pack_box_type(*b"hdlr") == child_header.box_type {
-                println!("hdlr: {:?}", mpeg::meta::parse_hdlr(&mut child_data)?);
+                println!("| -> hdlr: {:?}", mpeg::meta::parse_hdlr(&mut child_data)?);
             } else if mpeg::pack_box_type(*b"pitm") == child_header.box_type {
-                println!("pitm: {:?}", mpeg::meta::parse_pitm(&mut child_data)?);
+                println!("| -> pitm: {:?}", mpeg::meta::parse_pitm(&mut child_data)?);
             } else if mpeg::pack_box_type(*b"iloc") == child_header.box_type {
-                println!("iloc: {:?}", mpeg::meta::parse_iloc(&mut child_data)?);
+                println!("| -> iloc: {:?}", mpeg::meta::parse_iloc(&mut child_data)?);
             } else if mpeg::pack_box_type(*b"iinf") == child_header.box_type {
-                println!("iinf: {:?}", mpeg::meta::parse_iinf(&mut child_data)?);
+                println!("| -> iinf: {:?}", mpeg::meta::parse_iinf(&mut child_data)?);
+            } else if mpeg::pack_box_type(*b"iprp") == child_header.box_type {
+                println!("| -> iprp: {:?}", mpeg::iprp::parse_iprp(&mut child_data)?);
             } else {
                 // skip unrecognised
-                let remaining = usize(child_data.limit());
-                child_data.read_exact(&mut vec![0u8; remaining])?;
+                skip(&mut child_data)?;
             }
 
             ensure!(
@@ -83,7 +76,8 @@ pub fn meta<R: Read>(mut from: R) -> Result<(), Error> {
     Ok(())
 }
 
-fn dirty_skip<R: Read>(mut from: R, header: &mpeg::BoxHeader) -> Result<(), Error> {
-    from.read_exact(&mut vec![0u8; usize(header.data_size())])?;
+fn skip<R: Read>(child_data: &mut Take<R>) -> Result<(), Error> {
+    let remaining = usize(child_data.limit());
+    child_data.read_exact(&mut vec![0u8; remaining])?;
     Ok(())
 }

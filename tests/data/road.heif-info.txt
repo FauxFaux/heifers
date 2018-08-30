@@ -1,0 +1,104 @@
+Box: ftyp -----
+size: 24   (header size: 8)
+major brand: heic
+minor version: 0
+compatible brands: mif1,heic
+
+Box: meta -----
+size: 301   (header size: 12)
+version: 0
+flags: 0
+| Box: hdlr -----
+| size: 33   (header size: 12)
+| version: 0
+| flags: 0
+| pre_defined: 0
+| handler_type: pict
+| name:
+|
+| Box: pitm -----
+| size: 14   (header size: 12)
+| version: 0
+| flags: 0
+| item_ID: 1
+|
+| Box: iloc -----
+| size: 34   (header size: 12)
+| version: 0
+| flags: 0
+| item ID: 1
+|   construction method: 0
+|   data_reference_index: 0
+|   base_offset: 333
+|   extents: 0,1048
+|
+| Box: iinf -----
+| size: 35   (header size: 12)
+| version: 0
+| flags: 0
+| | Box: infe -----
+| | size: 21   (header size: 12)
+| | version: 2
+| | flags: 0
+| | item_ID: 1
+| | item_protection_index: 0
+| | item_type: hvc1
+| | item_name:
+| | content_type:
+| | content_encoding:
+| | item uri type:
+| | hidden item: false
+|
+| Box: iprp -----
+| size: 173   (header size: 8)
+| | Box: ipco -----
+| | size: 144   (header size: 8)
+| | | Box: hvcC -----
+| | | size: 116   (header size: 8)
+| | | configuration_version: 1
+| | | general_profile_space: 0
+| | | general_tier_flag: 0
+| | | general_profile_idc: 4
+| | | general_profile_compatibility_flags: 0000.1000 0000.0000 0000.0000 0000.0000
+| | | general_constraint_indicator_flags: 00000000 00000000 00000000 00000000 00000000 00000000
+| | | general_level_idc: 60
+| | | min_spatial_segmentation_idc: 0
+| | | parallelism_type: 0
+| | | chroma_format: 1
+| | | bit_depth_luma: 8
+| | | bit_depth_chroma: 8
+| | | avg_frame_rate: 0
+| | | constant_frame_rate: 0
+| | | num_temporal_layers: 1
+| | | temporal_id_nested: 1
+| | | length_size: 4
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 32
+| | | | 40 01 0c 01 ff ff 04 08 00 00 03 00 9f a8 00 00 03 00 00 3c ba 02 40
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 33
+| | | | 42 01 01 04 08 00 00 03 00 9f a8 00 00 03 00 00 3c a0 0b 48 0c 1f 59 6e a4 92 8a e0 10 00 00 03 00 10 00 00 03 00 10 80
+| | | <array>
+| | | | array_completeness: 0
+| | | | NAL_unit_type: 34
+| | | | 44 01 c1 72 b0 62 40
+| | |
+| | | Box: ispe -----
+| | | size: 20   (header size: 12)
+| | | version: 0
+| | | flags: 0
+| | | image width: 360
+| | | image height: 190
+| |
+| | Box: ipma -----
+| | size: 21   (header size: 12)
+| | version: 0
+| | flags: 0
+| | associations for item ID: 1
+| | | property index: 1 (essential: true)
+| | | property index: 2 (essential: false)
+
+Box: mdat -----
+size: 1056   (header size: 8)
