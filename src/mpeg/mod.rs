@@ -14,11 +14,11 @@ pub mod iprp;
 pub mod meta;
 
 #[derive(Copy, Clone, Hash, Eq, PartialEq)]
-pub struct BoxType(u32);
+pub struct FourCc(pub u32);
 
 #[derive(Copy, Clone, Debug)]
 pub struct BoxHeader {
-    pub box_type: BoxType,
+    pub box_type: FourCc,
     pub size: u64,
     pub offset: u8,
 }
@@ -30,9 +30,9 @@ pub struct ExtendedHeader {
 
 #[derive(Clone, Debug)]
 pub struct FileType {
-    pub major_brand: BoxType,
+    pub major_brand: FourCc,
     pub minor_version: u32,
-    pub brands: Vec<BoxType>,
+    pub brands: Vec<FourCc>,
 }
 
 #[derive(Clone, Debug)]
@@ -53,7 +53,7 @@ pub struct Extent {
 pub struct ItemInfo {
     id: u16,
     protection_index: u16,
-    item_type: BoxType,
+    item_type: FourCc,
     item_name: String,
 }
 
@@ -65,7 +65,7 @@ impl BoxHeader {
 
 pub fn read_header<R: Read>(mut from: R) -> Result<BoxHeader, Error> {
     let size_low = from.read_u32::<BE>()?;
-    let box_type = BoxType(from.read_u32::<BE>()?);
+    let box_type = FourCc(from.read_u32::<BE>()?);
 
     let (offset, size) = match size_low {
         1 => {
@@ -97,14 +97,14 @@ pub fn read_full_box_header<R: Read>(mut from: R) -> Result<ExtendedHeader, Erro
 }
 
 pub fn parse_ftyp<R: Read>(mut from: Take<R>) -> Result<FileType, Error> {
-    let major_brand = BoxType(from.read_u32::<BE>()?);
+    let major_brand = FourCc(from.read_u32::<BE>()?);
     let minor_version = from.read_u32::<BE>()?;
     let remaining = from.limit();
     ensure!(0 == remaining % 4, "invalid brand list in 'ftyp'");
     let brand_names = usize(remaining / 4);
     let mut brands = Vec::with_capacity(brand_names);
     for _ in 0..brand_names {
-        brands.push(BoxType(from.read_u32::<BE>()?));
+        brands.push(FourCc(from.read_u32::<BE>()?));
     }
 
     assert_eq!(0, from.limit());
@@ -129,15 +129,10 @@ fn read_value_of_size<R: Read>(mut from: R, bytes: u8) -> Result<u64, Error> {
     })
 }
 
-impl fmt::Debug for BoxType {
+impl fmt::Debug for FourCc {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut buf = [0u8; 4];
         BE::write_u32(&mut buf, self.0);
         write!(f, "{:?}", String::from_utf8_lossy(&buf))
     }
-}
-
-#[inline]
-pub fn pack_box_type(str: [u8; 4]) -> BoxType {
-    BoxType(BE::read_u32(&str))
 }

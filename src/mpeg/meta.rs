@@ -8,17 +8,16 @@ use byteorder::BE;
 use cast::usize;
 use failure::Error;
 
-use mpeg::pack_box_type;
 use mpeg::read_full_box_header;
 use mpeg::read_header;
 use mpeg::read_u4_pair;
 use mpeg::read_value_of_size;
-use mpeg::BoxType;
+use mpeg::FourCc;
 use mpeg::Extent;
 use mpeg::Item;
 use mpeg::ItemInfo;
 
-pub fn parse_hdlr<R: Read>(mut from: &mut Take<R>) -> Result<BoxType, Error> {
+pub fn parse_hdlr<R: Read>(mut from: &mut Take<R>) -> Result<FourCc, Error> {
     ensure!(from.limit() >= 4 + 4 + 4 + 12, "hdlr box is too small");
     let extended = read_full_box_header(&mut from)?;
     ensure!(
@@ -28,7 +27,7 @@ pub fn parse_hdlr<R: Read>(mut from: &mut Take<R>) -> Result<BoxType, Error> {
     );
 
     from.read_exact(&mut [0u8; 4])?;
-    let ret = BoxType(from.read_u32::<BE>()?);
+    let ret = FourCc(from.read_u32::<BE>()?);
     let remaining = usize(from.limit());
     from.read_exact(&mut vec![0u8; remaining])?;
     Ok(ret)
@@ -96,7 +95,7 @@ pub fn parse_iinf<R: Read>(mut from: &mut Take<R>) -> Result<Vec<ItemInfo>, Erro
     for _ in 0..entry_count {
         let header = read_header(&mut from)?;
         ensure!(
-            pack_box_type(*b"infe") == header.box_type,
+            fourcc!("infe") == header.box_type,
             "unexpected iinf child: {:?}",
             header
         );
@@ -112,7 +111,7 @@ pub fn parse_iinf<R: Read>(mut from: &mut Take<R>) -> Result<Vec<ItemInfo>, Erro
 
         let id = infe.read_u16::<BE>()?;
         let protection_index = infe.read_u16::<BE>()?;
-        let item_type = BoxType(infe.read_u32::<BE>()?);
+        let item_type = FourCc(infe.read_u32::<BE>()?);
         let mut item_name = Vec::new();
         infe.read_until(0, &mut item_name)?;
 
