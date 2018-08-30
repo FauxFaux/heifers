@@ -27,7 +27,7 @@ pub const INFE: FourCc = FourCc(0x696e6665); // infe
 pub const IPCO: FourCc = FourCc(0x6970636f); // ipco
 pub const IPMA: FourCc = FourCc(0x69706d61); // ipma
 pub const IPRP: FourCc = FourCc(0x69707270); // iprp
-pub const IPSE: FourCc = FourCc(0x69707365); // ipse
+pub const ISPE: FourCc = FourCc(0x69737065); // ispe
 pub const META: FourCc = FourCc(0x6d657461); // meta
 pub const MDAT: FourCc = FourCc(0x6d646174); // mdat
 pub const MOOV: FourCc = FourCc(0x6d6f6f76); // moov
@@ -178,7 +178,7 @@ mod tests {
     fn packing_fourcc() {
         for key in &[
             "ftyp", "hdlr", "heic", "hvc1", "hvcC", "iinf", "iloc", "infe", "ipco", "ipma", "iprp",
-            "ipse", "meta", "mdat", "moov", "pitm",
+            "ispe", "meta", "mdat", "moov", "pitm",
         ] {
             println!(
                 "pub const {}: FourCc = FourCc(0x{:08x}); // {}",

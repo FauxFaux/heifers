@@ -13,11 +13,13 @@ use failure::Error;
 use mpeg::read_full_box_header;
 use mpeg::read_header;
 use mpeg::skip;
+use mpeg::FourCc;
 
 #[derive(Clone, Debug)]
 pub enum Property {
     HvcCodecSettings(Hvcc),
     Size((u32, u32)),
+    Unknown(FourCc),
 }
 
 #[derive(Clone, Debug)]
@@ -105,11 +107,14 @@ pub fn parse_ipco<R: Read>(mut from: &mut Take<R>) -> Result<Vec<Property>, Erro
         let child_header = read_header(&mut from)?;
         let mut child_data = (&mut from).take(child_header.data_size());
         match child_header.box_type {
-            super::IPSE => properties.push(Property::Size(parse_ispe(&mut child_data)?)),
+            super::ISPE => properties.push(Property::Size(parse_ispe(&mut child_data)?)),
             super::HVCC => {
                 properties.push(Property::HvcCodecSettings(parse_hvcc(&mut child_data)?))
             }
-            _ => skip(&mut child_data)?,
+            other => {
+                properties.push(Property::Unknown(other));
+                skip(&mut child_data)?
+            }
         }
 
         ensure!(

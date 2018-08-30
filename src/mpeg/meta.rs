@@ -5,8 +5,8 @@ use std::io::Take;
 
 use byteorder::ReadBytesExt;
 use byteorder::BE;
-use cast::usize;
 use cast::u32;
+use cast::usize;
 use failure::Error;
 
 use mpeg;
@@ -141,7 +141,11 @@ pub fn parse_iloc<R: Read>(mut from: &mut Take<R>) -> Result<Vec<Item>, Error> {
             };
             let offset = read_value_of_size(&mut from, offset_size)?;
             let length = read_value_of_size(&mut from, length_size)?;
-            extents.push(Extent { index, offset, length })
+            extents.push(Extent {
+                index,
+                offset,
+                length,
+            })
         }
 
         items.push(Item {
