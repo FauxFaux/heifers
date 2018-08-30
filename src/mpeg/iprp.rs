@@ -33,7 +33,7 @@ pub fn parse_iprp<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
         if pack_box_type(*b"ipma") == child_header.box_type {
             println!("| | -> ipma: {:?}", parse_ipma(&mut child_data)?);
         } else if pack_box_type(*b"ipco") == child_header.box_type {
-            println!("| | -> ipma: {:?}", parse_ipco(&mut child_data)?);
+            println!("| | -> ipco: {:?}", parse_ipco(&mut child_data)?);
         } else {
             println!("| | .. unsupported");
             skip(&mut child_data)?;
