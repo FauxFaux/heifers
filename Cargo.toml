@@ -9,3 +9,6 @@ byteorder = "1"
 cast = "0.2"
 failure = "0.1"
 more-asserts = "0.2"
+
+[dev-dependencies]
+heck = "0.3"

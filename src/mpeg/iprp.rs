@@ -65,9 +65,9 @@ pub fn parse_iprp<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
         let child_header = read_header(&mut from)?;
         println!("| | {}: {:?}", from.limit(), child_header);
         let mut child_data = (&mut from).take(child_header.data_size());
-        if fourcc!("ipma") == child_header.box_type {
+        if super::IPMA == child_header.box_type {
             println!("| | -> ipma: {:?}", parse_ipma(&mut child_data)?);
-        } else if fourcc!("ipco") == child_header.box_type {
+        } else if super::IPCO == child_header.box_type {
             println!("| | -> ipco: {:?}", parse_ipco(&mut child_data)?);
         } else {
             println!("| | .. unsupported");
@@ -89,9 +89,9 @@ pub fn parse_ipco<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
         let child_header = read_header(&mut from)?;
         println!("| | | {}: {:?}", from.limit(), child_header);
         let mut child_data = (&mut from).take(child_header.data_size());
-        if fourcc!("ispe") == child_header.box_type {
+        if super::IPSE == child_header.box_type {
             println!("| | | -> ispe: {:?}", parse_ispe(&mut child_data)?);
-        } else if fourcc!("hvcC") == child_header.box_type {
+        } else if super::HVCC == child_header.box_type {
             println!("| | | -> hvcC: {:?}", parse_hvcc(&mut child_data)?);
         } else {
             println!("| | | .. unsupported");

@@ -14,7 +14,22 @@ pub mod iprp;
 pub mod meta;
 
 #[derive(Copy, Clone, Hash, Eq, PartialEq)]
-pub struct FourCc(pub u32);
+pub struct FourCc(u32);
+
+pub const FTYP: FourCc = FourCc(0x66747970); // ftyp
+pub const HDLR: FourCc = FourCc(0x68646c72); // hdlr
+pub const HEIC: FourCc = FourCc(0x68656963); // heic
+pub const HVC1: FourCc = FourCc(0x68766331); // hvc1
+pub const HVCC: FourCc = FourCc(0x68766343); // hvcC
+pub const IINF: FourCc = FourCc(0x69696e66); // iinf
+pub const ILOC: FourCc = FourCc(0x696c6f63); // iloc
+pub const INFE: FourCc = FourCc(0x696e6665); // infe
+pub const IPCO: FourCc = FourCc(0x6970636f); // ipco
+pub const IPMA: FourCc = FourCc(0x69706d61); // ipma
+pub const IPRP: FourCc = FourCc(0x69707270); // iprp
+pub const IPSE: FourCc = FourCc(0x69707365); // ipse
+pub const META: FourCc = FourCc(0x6d657461); // meta
+pub const PITM: FourCc = FourCc(0x7069746d); // pitm
 
 #[derive(Copy, Clone, Debug)]
 pub struct BoxHeader {
@@ -134,5 +149,31 @@ impl fmt::Debug for FourCc {
         let mut buf = [0u8; 4];
         BE::write_u32(&mut buf, self.0);
         write!(f, "{:?}", String::from_utf8_lossy(&buf))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    extern crate heck;
+
+    fn pack_fourcc(str: &[u8]) -> u32 {
+        use byteorder::ByteOrder;
+        use byteorder::BE;
+        BE::read_u32(&str)
+    }
+
+    #[test]
+    fn packing_fourcc() {
+        for key in &[
+            "ftyp", "hdlr", "heic", "hvc1", "hvcC", "iinf", "iloc", "infe", "ipco", "ipma", "iprp",
+            "ipse", "meta", "pitm",
+        ] {
+            println!(
+                "pub const {}: FourCc = FourCc(0x{:08x}); // {}",
+                key.to_ascii_uppercase(),
+                pack_fourcc(key.as_ref()),
+                key
+            );
+        }
     }
 }

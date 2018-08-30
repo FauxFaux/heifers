@@ -12,8 +12,8 @@ use mpeg::read_full_box_header;
 use mpeg::read_header;
 use mpeg::read_u4_pair;
 use mpeg::read_value_of_size;
-use mpeg::FourCc;
 use mpeg::Extent;
+use mpeg::FourCc;
 use mpeg::Item;
 use mpeg::ItemInfo;
 
@@ -95,7 +95,7 @@ pub fn parse_iinf<R: Read>(mut from: &mut Take<R>) -> Result<Vec<ItemInfo>, Erro
     for _ in 0..entry_count {
         let header = read_header(&mut from)?;
         ensure!(
-            fourcc!("infe") == header.box_type,
+            super::INFE == header.box_type,
             "unexpected iinf child: {:?}",
             header
         );
