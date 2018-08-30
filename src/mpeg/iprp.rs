@@ -1,6 +1,7 @@
 use std::io::Read;
 use std::io::Take;
 
+use bitreader::BitReader;
 use byteorder::ReadBytesExt;
 use byteorder::BE;
 use cast::u16;
@@ -9,7 +10,6 @@ use cast::u64;
 use cast::usize;
 use failure::Error;
 
-use bitreader::BitReader;
 use mpeg::pack_box_type;
 use mpeg::read_full_box_header;
 use mpeg::read_header;
