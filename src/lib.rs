@@ -12,7 +12,7 @@ use failure::Error;
 
 pub mod mpeg;
 
-pub fn open<R: Read>(mut from: R) -> Result<(), Error> {
+pub fn open<R: Read>(mut from: R) -> Result<mpeg::meta::RawMeta, Error> {
     let file_type = loop {
         let header = mpeg::read_header(&mut from)?;
 

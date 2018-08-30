@@ -157,7 +157,6 @@ fn skip<R: Read>(child_data: &mut Take<R>) -> Result<(), Error> {
     Ok(())
 }
 
-
 impl fmt::Debug for FourCc {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut buf = [0u8; 4];
@@ -168,8 +167,6 @@ impl fmt::Debug for FourCc {
 
 #[cfg(test)]
 mod tests {
-    extern crate heck;
-
     fn pack_fourcc(str: &[u8]) -> u32 {
         use byteorder::ByteOrder;
         use byteorder::BE;

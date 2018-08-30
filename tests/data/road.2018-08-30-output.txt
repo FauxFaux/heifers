@@ -1,0 +1,18 @@
+| 281: BoxHeader { box_type: "hdlr", size: 33, offset: 8 }
+| -> hdlr: "pict"
+| 248: BoxHeader { box_type: "pitm", size: 14, offset: 8 }
+| -> pitm: 1
+| 234: BoxHeader { box_type: "iloc", size: 34, offset: 8 }
+| -> iloc: [Item { id: 1, data_reference_index: 0, base_offset: 333, extents: [Extent { offset: 0, length: 1048 }] }]
+| 200: BoxHeader { box_type: "iinf", size: 35, offset: 8 }
+| -> iinf: [ItemInfo { id: 1, protection_index: 0, item_type: "hvc1", item_name: "\u{0}" }]
+| 165: BoxHeader { box_type: "iprp", size: 173, offset: 8 }
+| | 157: BoxHeader { box_type: "ipco", size: 144, offset: 8 }
+| | | 128: BoxHeader { box_type: "hvcC", size: 116, offset: 8 }
+| | | -> hvcC: Hvcc { header: HvccHeader { configuration_version: 1, general_profile_space: 0, general_tier_flag: false, general_profile_idc: 4, general_profile_compatibility_flags: 134217728, general_constraint_indicator_flags: 0, general_level_idc: 60, min_spatial_segmentation_idc: 0, parallelism_type: 0, chroma_format: 1, bit_depth_luma_minus8: 0, bit_depth_chroma_minus8: 0, avg_frame_rate: 0, constant_frame_rate: 0, num_temporal_layers: 1, temporal_id_nested: true, length_size_minus_one: 3 }, nals: [Nal { completeness_and_nal_unit_type: 32, units: [[64, 1, 12, 1, 255, 255, 4, 8, 0, 0, 3, 0, 159, 168, 0, 0, 3, 0, 0, 60, 186, 2, 64]] }, Nal { completeness_and_nal_unit_type: 33, units: [[66, 1, 1, 4, 8, 0, 0, 3, 0, 159, 168, 0, 0, 3, 0, 0, 60, 160, 11, 72, 12, 31, 89, 110, 164, 146, 138, 224, 16, 0, 0, 3, 0, 16, 0, 0, 3, 0, 16, 128]] }, Nal { completeness_and_nal_unit_type: 34, units: [[68, 1, 193, 114, 176, 98, 64]] }] }
+| | | 12: BoxHeader { box_type: "ispe", size: 20, offset: 8 }
+| | | .. unsupported
+| | -> ipco: ()
+| | 13: BoxHeader { box_type: "ipma", size: 21, offset: 8 }
+| | -> ipma: [ItemPropertyAssociation { item_id: 1, associations: [Association { essential: true, property_index: 1 }, Association { essential: false, property_index: 2 }] }]
+| -> iprp: ()

@@ -14,25 +14,40 @@ use mpeg::read_full_box_header;
 use mpeg::read_header;
 use mpeg::read_u4_pair;
 use mpeg::read_value_of_size;
+use mpeg::skip;
 use mpeg::Extent;
 use mpeg::FourCc;
 use mpeg::Item;
 use mpeg::ItemInfo;
-use mpeg::skip;
 
-pub fn parse<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
+#[derive(Clone, Debug)]
+pub struct RawMeta {
+    handler: Vec<FourCc>,            // hdlr
+    primary_item: Vec<u16>,          // pitm
+    item_locators: Vec<Vec<Item>>,   // iloc
+    item_infos: Vec<Vec<ItemInfo>>,  // iinf
+    item_props: Vec<iprp::RawProps>, // iprp
+}
+
+pub fn parse<R: Read>(mut from: &mut Take<R>) -> Result<RawMeta, Error> {
     let _ = read_full_box_header(&mut from)?;
+
+    let mut handler = Vec::with_capacity(1);
+    let mut primary_item = Vec::with_capacity(1);
+    let mut item_locators = Vec::with_capacity(1);
+    let mut item_infos = Vec::with_capacity(1);
+    let mut item_props = Vec::with_capacity(1);
 
     while 0 != from.limit() {
         let child_header = read_header(&mut from)?;
         println!("| {}: {:?}", from.limit(), child_header);
         let mut child_data = (&mut from).take(child_header.data_size());
         match child_header.box_type {
-            mpeg::HDLR => println!("| -> hdlr: {:?}", parse_hdlr(&mut child_data)?),
-            mpeg::PITM => println!("| -> pitm: {:?}", parse_pitm(&mut child_data)?),
-            mpeg::ILOC => println!("| -> iloc: {:?}", parse_iloc(&mut child_data)?),
-            mpeg::IINF => println!("| -> iinf: {:?}", parse_iinf(&mut child_data)?),
-            mpeg::IPRP => println!("| -> iprp: {:?}", iprp::parse_iprp(&mut child_data)?),
+            mpeg::HDLR => handler.push(parse_hdlr(&mut child_data)?),
+            mpeg::PITM => primary_item.push(parse_pitm(&mut child_data)?),
+            mpeg::ILOC => item_locators.push(parse_iloc(&mut child_data)?),
+            mpeg::IINF => item_infos.push(parse_iinf(&mut child_data)?),
+            mpeg::IPRP => item_props.push(iprp::parse_iprp(&mut child_data)?),
             _ => skip(&mut child_data)?,
         }
 
@@ -43,7 +58,13 @@ pub fn parse<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
         );
     }
 
-    Ok(())
+    Ok(RawMeta {
+        handler,
+        primary_item,
+        item_locators,
+        item_infos,
+        item_props,
+    })
 }
 
 pub fn parse_hdlr<R: Read>(mut from: &mut Take<R>) -> Result<FourCc, Error> {

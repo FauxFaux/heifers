@@ -15,6 +15,9 @@ use mpeg::read_header;
 use mpeg::skip;
 
 #[derive(Clone, Debug)]
+pub struct RawProps {}
+
+#[derive(Clone, Debug)]
 pub struct ItemPropertyAssociation {
     item_id: u32,
     associations: Vec<Association>,
@@ -60,7 +63,7 @@ struct Nal {
     units: Vec<Vec<u8>>,
 }
 
-pub fn parse_iprp<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
+pub fn parse_iprp<R: Read>(mut from: &mut Take<R>) -> Result<RawProps, Error> {
     while 0 != from.limit() {
         let child_header = read_header(&mut from)?;
         println!("| | {}: {:?}", from.limit(), child_header);
@@ -81,7 +84,7 @@ pub fn parse_iprp<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
         );
     }
 
-    Ok(())
+    Ok(RawProps {})
 }
 
 pub fn parse_ipco<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
