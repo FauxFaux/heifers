@@ -5,9 +5,11 @@ use byteorder::ReadBytesExt;
 use byteorder::BE;
 use cast::u16;
 use cast::u32;
+use cast::u64;
 use cast::usize;
 use failure::Error;
 
+use bitreader::BitReader;
 use mpeg::pack_box_type;
 use mpeg::read_full_box_header;
 use mpeg::read_header;
@@ -56,6 +58,8 @@ pub fn parse_ipco<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
         let mut child_data = (&mut from).take(child_header.data_size());
         if pack_box_type(*b"ispe") == child_header.box_type {
             println!("| | | -> ispe: {:?}", parse_ispe(&mut child_data)?);
+        } else if pack_box_type(*b"hvcC") == child_header.box_type {
+            println!("| | | -> hvcC: {:?}", parse_hvcc(&mut child_data)?);
         } else {
             println!("| | | .. unsupported");
             skip(&mut child_data)?;
@@ -118,4 +122,64 @@ pub fn parse_ipma<R: Read>(mut from: &mut Take<R>) -> Result<Vec<ItemPropertyAss
 pub fn parse_ispe<R: Read>(mut from: &mut Take<R>) -> Result<(u32, u32), Error> {
     let _ = read_full_box_header(&mut from)?;
     Ok((from.read_u32::<BE>()?, from.read_u32::<BE>()?))
+}
+
+pub fn parse_hvcc<R: Read>(from: &mut Take<R>) -> Result<(), Error> {
+    let header = {
+        let mut fixed = [0u8; 22];
+        from.read_exact(&mut fixed)?;
+        let mut bits = BitReader::new(&fixed);
+
+        let configuration_version = bits.read_u8(8)?;
+        let general_profile_space = bits.read_u8(2)?;
+        let general_tier_flag = bits.read_bool()?;
+        let general_profile_idc = bits.read_u8(5)?;
+        let general_profile_compatibility_flags = bits.read_u32(32)?;
+        let general_constraint_indicator_flags = bits.read_u64(48)?;
+        let general_level_idc = bits.read_u8(8)?;
+        skip_reserved(&mut bits, 4)?;
+        let min_spatial_segmentation_idc = bits.read_u16(12)?;
+        skip_reserved(&mut bits, 6)?;
+        let parallelism_type = bits.read_u8(2)?;
+        skip_reserved(&mut bits, 6)?;
+        let chroma_format = bits.read_u8(2)?;
+        skip_reserved(&mut bits, 5)?;
+        let bit_depth_luma_minus8 = bits.read_u8(3)?;
+        skip_reserved(&mut bits, 5)?;
+        let bit_depth_chroma_minus8 = bits.read_u8(3)?;
+        let avg_frame_rate = bits.read_u16(16)?;
+        let constant_frame_rate = bits.read_u8(2)?;
+        let num_temporal_layers = bits.read_u8(3)?;
+        let temporal_id_nested = bits.read_bool()?;
+        let length_size_minus_one = bits.read_u8(2)?;
+
+        assert_eq!(
+            bits.position(),
+            8 * u64(fixed.len()),
+            "bitreader should be empty as we're done"
+        );
+
+
+    };
+
+    let num_of_arrays = from.read_u8()?;
+
+    for _ in 0..num_of_arrays {
+        let completeness_and_nal_unit_type = from.read_u8()? & 0b1011_1111;
+        let num_nal_units = from.read_u16::<BE>()?;
+
+        for _ in 0..num_nal_units {
+            let nal_unit_length = from.read_u16::<BE>()?;
+            let mut unit = vec![0u8; usize(nal_unit_length)];
+            from.read_exact(&mut unit)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn skip_reserved(bits: &mut BitReader, bit_count: u8) -> Result<(), Error> {
+    let _ = bits.read_u8(bit_count)?;
+    // TODO: validate this is ... unknown?
+    Ok(())
 }

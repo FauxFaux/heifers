@@ -1,3 +1,4 @@
+extern crate bitreader;
 extern crate byteorder;
 extern crate cast;
 #[macro_use]
