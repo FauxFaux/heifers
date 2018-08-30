@@ -15,7 +15,16 @@ use mpeg::read_header;
 use mpeg::skip;
 
 #[derive(Clone, Debug)]
-pub struct RawProps {}
+pub enum Property {
+    HvcCodecSettings(Hvcc),
+    Size((u32, u32)),
+}
+
+#[derive(Clone, Debug)]
+pub struct RawProps {
+    containers: Vec<Vec<Property>>,
+    associations: Vec<Vec<ItemPropertyAssociation>>,
+}
 
 #[derive(Clone, Debug)]
 pub struct ItemPropertyAssociation {
@@ -64,17 +73,16 @@ struct Nal {
 }
 
 pub fn parse_iprp<R: Read>(mut from: &mut Take<R>) -> Result<RawProps, Error> {
+    let mut containers = Vec::with_capacity(1);
+    let mut associations = Vec::with_capacity(1);
+
     while 0 != from.limit() {
         let child_header = read_header(&mut from)?;
-        println!("| | {}: {:?}", from.limit(), child_header);
         let mut child_data = (&mut from).take(child_header.data_size());
         match child_header.box_type {
-            super::IPMA => println!("| | -> ipma: {:?}", parse_ipma(&mut child_data)?),
-            super::IPCO => println!("| | -> ipco: {:?}", parse_ipco(&mut child_data)?),
-            _ => {
-                println!("| | .. unsupported");
-                skip(&mut child_data)?;
-            }
+            super::IPCO => containers.push(parse_ipco(&mut child_data)?),
+            super::IPMA => associations.push(parse_ipma(&mut child_data)?),
+            _ => skip(&mut child_data)?,
         }
 
         ensure!(
@@ -84,21 +92,24 @@ pub fn parse_iprp<R: Read>(mut from: &mut Take<R>) -> Result<RawProps, Error> {
         );
     }
 
-    Ok(RawProps {})
+    Ok(RawProps {
+        containers,
+        associations,
+    })
 }
 
-pub fn parse_ipco<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
+pub fn parse_ipco<R: Read>(mut from: &mut Take<R>) -> Result<Vec<Property>, Error> {
+    let mut properties = Vec::with_capacity(2);
+
     while 0 != from.limit() {
         let child_header = read_header(&mut from)?;
-        println!("| | | {}: {:?}", from.limit(), child_header);
         let mut child_data = (&mut from).take(child_header.data_size());
         match child_header.box_type {
-            super::IPSE => println!("| | | -> ispe: {:?}", parse_ispe(&mut child_data)?),
-            super::HVCC => println!("| | | -> hvcC: {:?}", parse_hvcc(&mut child_data)?),
-            _ => {
-                println!("| | | .. unsupported");
-                skip(&mut child_data)?;
+            super::IPSE => properties.push(Property::Size(parse_ispe(&mut child_data)?)),
+            super::HVCC => {
+                properties.push(Property::HvcCodecSettings(parse_hvcc(&mut child_data)?))
             }
+            _ => skip(&mut child_data)?,
         }
 
         ensure!(
@@ -108,7 +119,7 @@ pub fn parse_ipco<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
         );
     }
 
-    Ok(())
+    Ok(properties)
 }
 
 pub fn parse_ipma<R: Read>(mut from: &mut Take<R>) -> Result<Vec<ItemPropertyAssociation>, Error> {

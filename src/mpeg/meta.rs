@@ -40,7 +40,6 @@ pub fn parse<R: Read>(mut from: &mut Take<R>) -> Result<RawMeta, Error> {
 
     while 0 != from.limit() {
         let child_header = read_header(&mut from)?;
-        println!("| {}: {:?}", from.limit(), child_header);
         let mut child_data = (&mut from).take(child_header.data_size());
         match child_header.box_type {
             mpeg::HDLR => handler.push(parse_hdlr(&mut child_data)?),
