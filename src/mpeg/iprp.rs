@@ -65,13 +65,13 @@ pub fn parse_iprp<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
         let child_header = read_header(&mut from)?;
         println!("| | {}: {:?}", from.limit(), child_header);
         let mut child_data = (&mut from).take(child_header.data_size());
-        if super::IPMA == child_header.box_type {
-            println!("| | -> ipma: {:?}", parse_ipma(&mut child_data)?);
-        } else if super::IPCO == child_header.box_type {
-            println!("| | -> ipco: {:?}", parse_ipco(&mut child_data)?);
-        } else {
-            println!("| | .. unsupported");
-            skip(&mut child_data)?;
+        match child_header.box_type {
+            super::IPMA => println!("| | -> ipma: {:?}", parse_ipma(&mut child_data)?),
+            super::IPCO => println!("| | -> ipco: {:?}", parse_ipco(&mut child_data)?),
+            _ => {
+                println!("| | .. unsupported");
+                skip(&mut child_data)?;
+            }
         }
 
         ensure!(
@@ -89,13 +89,13 @@ pub fn parse_ipco<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
         let child_header = read_header(&mut from)?;
         println!("| | | {}: {:?}", from.limit(), child_header);
         let mut child_data = (&mut from).take(child_header.data_size());
-        if super::IPSE == child_header.box_type {
-            println!("| | | -> ispe: {:?}", parse_ispe(&mut child_data)?);
-        } else if super::HVCC == child_header.box_type {
-            println!("| | | -> hvcC: {:?}", parse_hvcc(&mut child_data)?);
-        } else {
-            println!("| | | .. unsupported");
-            skip(&mut child_data)?;
+        match child_header.box_type {
+            super::IPSE => println!("| | | -> ispe: {:?}", parse_ispe(&mut child_data)?),
+            super::HVCC => println!("| | | -> hvcC: {:?}", parse_hvcc(&mut child_data)?),
+            _ => {
+                println!("| | | .. unsupported");
+                skip(&mut child_data)?;
+            }
         }
 
         ensure!(

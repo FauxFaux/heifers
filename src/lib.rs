@@ -50,19 +50,13 @@ pub fn meta<R: Read>(mut from: R) -> Result<(), Error> {
             let child_header = mpeg::read_header(&mut box_data)?;
             println!("| {}: {:?}", box_data.limit(), child_header);
             let mut child_data = (&mut box_data).take(child_header.data_size());
-            if mpeg::HDLR == child_header.box_type {
-                println!("| -> hdlr: {:?}", mpeg::meta::parse_hdlr(&mut child_data)?);
-            } else if mpeg::PITM == child_header.box_type {
-                println!("| -> pitm: {:?}", mpeg::meta::parse_pitm(&mut child_data)?);
-            } else if mpeg::ILOC == child_header.box_type {
-                println!("| -> iloc: {:?}", mpeg::meta::parse_iloc(&mut child_data)?);
-            } else if mpeg::IINF == child_header.box_type {
-                println!("| -> iinf: {:?}", mpeg::meta::parse_iinf(&mut child_data)?);
-            } else if mpeg::IPRP == child_header.box_type {
-                println!("| -> iprp: {:?}", mpeg::iprp::parse_iprp(&mut child_data)?);
-            } else {
-                // skip unrecognised
-                skip(&mut child_data)?;
+            match child_header.box_type {
+                mpeg::HDLR => println!("| -> hdlr: {:?}", mpeg::meta::parse_hdlr(&mut child_data)?),
+                mpeg::PITM => println!("| -> pitm: {:?}", mpeg::meta::parse_pitm(&mut child_data)?),
+                mpeg::ILOC => println!("| -> iloc: {:?}", mpeg::meta::parse_iloc(&mut child_data)?),
+                mpeg::IINF => println!("| -> iinf: {:?}", mpeg::meta::parse_iinf(&mut child_data)?),
+                mpeg::IPRP => println!("| -> iprp: {:?}", mpeg::iprp::parse_iprp(&mut child_data)?),
+                _ => skip(&mut child_data)?,
             }
 
             ensure!(
