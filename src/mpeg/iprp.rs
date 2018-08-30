@@ -27,6 +27,40 @@ struct Association {
     property_index: u16,
 }
 
+#[derive(Clone, Debug)]
+pub struct Hvcc {
+    header: HvccHeader,
+    nals: Vec<Nal>,
+}
+
+// what an absolute unit
+#[derive(Copy, Clone, Debug)]
+struct HvccHeader {
+    configuration_version: u8,
+    general_profile_space: u8,
+    general_tier_flag: bool,
+    general_profile_idc: u8,
+    general_profile_compatibility_flags: u32,
+    general_constraint_indicator_flags: u64,
+    general_level_idc: u8,
+    min_spatial_segmentation_idc: u16,
+    parallelism_type: u8,
+    chroma_format: u8,
+    bit_depth_luma_minus8: u8,
+    bit_depth_chroma_minus8: u8,
+    avg_frame_rate: u16,
+    constant_frame_rate: u8,
+    num_temporal_layers: u8,
+    temporal_id_nested: bool,
+    length_size_minus_one: u8,
+}
+
+#[derive(Clone, Debug)]
+struct Nal {
+    completeness_and_nal_unit_type: u8,
+    units: Vec<Vec<u8>>,
+}
+
 pub fn parse_iprp<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
     while 0 != from.limit() {
         let child_header = read_header(&mut from)?;
@@ -124,7 +158,7 @@ pub fn parse_ispe<R: Read>(mut from: &mut Take<R>) -> Result<(u32, u32), Error> 
     Ok((from.read_u32::<BE>()?, from.read_u32::<BE>()?))
 }
 
-pub fn parse_hvcc<R: Read>(from: &mut Take<R>) -> Result<(), Error> {
+pub fn parse_hvcc<R: Read>(from: &mut Take<R>) -> Result<Hvcc, Error> {
     let header = {
         let mut fixed = [0u8; 22];
         from.read_exact(&mut fixed)?;
@@ -159,23 +193,50 @@ pub fn parse_hvcc<R: Read>(from: &mut Take<R>) -> Result<(), Error> {
             "bitreader should be empty as we're done"
         );
 
-
+        HvccHeader {
+            configuration_version,
+            general_profile_space,
+            general_tier_flag,
+            general_profile_idc,
+            general_profile_compatibility_flags,
+            general_constraint_indicator_flags,
+            general_level_idc,
+            min_spatial_segmentation_idc,
+            parallelism_type,
+            chroma_format,
+            bit_depth_luma_minus8,
+            bit_depth_chroma_minus8,
+            avg_frame_rate,
+            constant_frame_rate,
+            num_temporal_layers,
+            temporal_id_nested,
+            length_size_minus_one,
+        }
     };
 
     let num_of_arrays = from.read_u8()?;
+    let mut nals = Vec::with_capacity(usize(num_of_arrays));
 
     for _ in 0..num_of_arrays {
         let completeness_and_nal_unit_type = from.read_u8()? & 0b1011_1111;
+
         let num_nal_units = from.read_u16::<BE>()?;
+        let mut units = Vec::with_capacity(usize(num_nal_units));
 
         for _ in 0..num_nal_units {
             let nal_unit_length = from.read_u16::<BE>()?;
             let mut unit = vec![0u8; usize(nal_unit_length)];
             from.read_exact(&mut unit)?;
+            units.push(unit);
         }
+
+        nals.push(Nal {
+            completeness_and_nal_unit_type,
+            units,
+        })
     }
 
-    Ok(())
+    Ok(Hvcc { header, nals })
 }
 
 fn skip_reserved(bits: &mut BitReader, bit_count: u8) -> Result<(), Error> {
