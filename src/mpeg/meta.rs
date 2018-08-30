@@ -6,6 +6,7 @@ use std::io::Take;
 use byteorder::ReadBytesExt;
 use byteorder::BE;
 use cast::usize;
+use cast::u32;
 use failure::Error;
 
 use mpeg;
@@ -95,18 +96,37 @@ pub fn parse_pitm<R: Read>(mut from: &mut Take<R>) -> Result<u16, Error> {
 pub fn parse_iloc<R: Read>(mut from: &mut Take<R>) -> Result<Vec<Item>, Error> {
     let extended = read_full_box_header(&mut from)?;
     ensure!(
-        0 == extended.version,
+        extended.version <= 2,
         "unsupported iloc version: {}",
         extended.version
     );
     let (offset_size, length_size) = read_u4_pair(&mut from)?;
-    let (base_offset_size, _reserved) = read_u4_pair(&mut from)?;
-    let item_count = from.read_u16::<BE>()?;
+    let (base_offset_size, mut index_size) = read_u4_pair(&mut from)?;
+
+    if 0 == extended.version {
+        index_size = 0;
+    }
+
+    let item_count = if extended.version < 2 {
+        u32(from.read_u16::<BE>()?)
+    } else {
+        from.read_u32::<BE>()?
+    };
 
     let mut items = Vec::with_capacity(usize(item_count));
 
     for _ in 0..item_count {
-        let id = from.read_u16::<BE>()?;
+        let id = if extended.version < 2 {
+            u32(from.read_u16::<BE>()?)
+        } else {
+            from.read_u32::<BE>()?
+        };
+
+        if extended.version > 0 {
+            let _reserved = from.read_u8()?;
+            let (_, construction_method) = read_u4_pair(&mut from)?;
+        }
+
         let data_reference_index = from.read_u16::<BE>()?;
         let base_offset = read_value_of_size(&mut from, base_offset_size)?;
         let extent_count = from.read_u16::<BE>()?;
@@ -114,9 +134,14 @@ pub fn parse_iloc<R: Read>(mut from: &mut Take<R>) -> Result<Vec<Item>, Error> {
         let mut extents = Vec::with_capacity(usize(extent_count));
 
         for _ in 0..extent_count {
+            let index = if index_size > 0 {
+                read_value_of_size(&mut from, index_size)?
+            } else {
+                0
+            };
             let offset = read_value_of_size(&mut from, offset_size)?;
             let length = read_value_of_size(&mut from, length_size)?;
-            extents.push(Extent { offset, length })
+            extents.push(Extent { index, offset, length })
         }
 
         items.push(Item {
