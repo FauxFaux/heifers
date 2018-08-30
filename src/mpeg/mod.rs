@@ -29,6 +29,8 @@ pub const IPMA: FourCc = FourCc(0x69706d61); // ipma
 pub const IPRP: FourCc = FourCc(0x69707270); // iprp
 pub const IPSE: FourCc = FourCc(0x69707365); // ipse
 pub const META: FourCc = FourCc(0x6d657461); // meta
+pub const MDAT: FourCc = FourCc(0x6d646174); // mdat
+pub const MOOV: FourCc = FourCc(0x6d6f6f76); // moov
 pub const PITM: FourCc = FourCc(0x7069746d); // pitm
 
 #[derive(Copy, Clone, Debug)]
@@ -103,7 +105,7 @@ pub fn read_header<R: Read>(mut from: R) -> Result<BoxHeader, Error> {
     })
 }
 
-pub fn read_full_box_header<R: Read>(mut from: R) -> Result<ExtendedHeader, Error> {
+fn read_full_box_header<R: Read>(mut from: R) -> Result<ExtendedHeader, Error> {
     let data = from.read_u32::<BE>()?;
     Ok(ExtendedHeader {
         version: u8(data >> 24)?,
@@ -111,7 +113,7 @@ pub fn read_full_box_header<R: Read>(mut from: R) -> Result<ExtendedHeader, Erro
     })
 }
 
-pub fn parse_ftyp<R: Read>(mut from: Take<R>) -> Result<FileType, Error> {
+pub fn parse_ftyp<R: Read>(from: &mut Take<R>) -> Result<FileType, Error> {
     let major_brand = FourCc(from.read_u32::<BE>()?);
     let minor_version = from.read_u32::<BE>()?;
     let remaining = from.limit();
@@ -144,6 +146,18 @@ fn read_value_of_size<R: Read>(mut from: R, bytes: u8) -> Result<u64, Error> {
     })
 }
 
+pub fn skip_box<R: Read>(mut from: R, header: &BoxHeader) -> Result<(), Error> {
+    skip(&mut (&mut from).take(header.data_size()))
+}
+
+fn skip<R: Read>(child_data: &mut Take<R>) -> Result<(), Error> {
+    let remaining = usize(child_data.limit());
+    // TODO: don't have unbounded allocation here
+    child_data.read_exact(&mut vec![0u8; remaining])?;
+    Ok(())
+}
+
+
 impl fmt::Debug for FourCc {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut buf = [0u8; 4];
@@ -166,7 +180,7 @@ mod tests {
     fn packing_fourcc() {
         for key in &[
             "ftyp", "hdlr", "heic", "hvc1", "hvcC", "iinf", "iloc", "infe", "ipco", "ipma", "iprp",
-            "ipse", "meta", "pitm",
+            "ipse", "meta", "mdat", "moov", "pitm",
         ] {
             println!(
                 "pub const {}: FourCc = FourCc(0x{:08x}); // {}",

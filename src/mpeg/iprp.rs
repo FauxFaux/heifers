@@ -12,7 +12,7 @@ use failure::Error;
 
 use mpeg::read_full_box_header;
 use mpeg::read_header;
-use skip;
+use mpeg::skip;
 
 #[derive(Clone, Debug)]
 pub struct ItemPropertyAssociation {

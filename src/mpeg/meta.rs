@@ -8,6 +8,8 @@ use byteorder::BE;
 use cast::usize;
 use failure::Error;
 
+use mpeg;
+use mpeg::iprp;
 use mpeg::read_full_box_header;
 use mpeg::read_header;
 use mpeg::read_u4_pair;
@@ -16,6 +18,33 @@ use mpeg::Extent;
 use mpeg::FourCc;
 use mpeg::Item;
 use mpeg::ItemInfo;
+use mpeg::skip;
+
+pub fn parse<R: Read>(mut from: &mut Take<R>) -> Result<(), Error> {
+    let _ = read_full_box_header(&mut from)?;
+
+    while 0 != from.limit() {
+        let child_header = read_header(&mut from)?;
+        println!("| {}: {:?}", from.limit(), child_header);
+        let mut child_data = (&mut from).take(child_header.data_size());
+        match child_header.box_type {
+            mpeg::HDLR => println!("| -> hdlr: {:?}", parse_hdlr(&mut child_data)?),
+            mpeg::PITM => println!("| -> pitm: {:?}", parse_pitm(&mut child_data)?),
+            mpeg::ILOC => println!("| -> iloc: {:?}", parse_iloc(&mut child_data)?),
+            mpeg::IINF => println!("| -> iinf: {:?}", parse_iinf(&mut child_data)?),
+            mpeg::IPRP => println!("| -> iprp: {:?}", iprp::parse_iprp(&mut child_data)?),
+            _ => skip(&mut child_data)?,
+        }
+
+        ensure!(
+            0 == child_data.limit(),
+            "meta parser failed to parse a segment: {:?}",
+            child_header
+        );
+    }
+
+    Ok(())
+}
 
 pub fn parse_hdlr<R: Read>(mut from: &mut Take<R>) -> Result<FourCc, Error> {
     ensure!(from.limit() >= 4 + 4 + 4 + 12, "hdlr box is too small");

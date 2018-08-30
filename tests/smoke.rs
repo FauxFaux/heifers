@@ -8,6 +8,6 @@ use failure::Error;
 
 #[test]
 fn road() -> Result<(), Error> {
-    heifers::meta(Cursor::new(&include_bytes!("data/road.heic")[..]))?;
+    heifers::open(Cursor::new(&include_bytes!("data/road.heic")[..]))?;
     Ok(())
 }
