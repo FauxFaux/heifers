@@ -8,17 +8,25 @@ use cast::usize;
 use failure::Error;
 
 use mpeg;
+use mpeg::iprp::Property;
+use mpeg::FourCc;
+use mpeg::ItemInfo;
 
 // TODO: not Debug
 #[derive(Debug)]
-pub struct Heif {}
+pub struct Heif {
+    handler: FourCc,
+    primary_item: u32,
+    items: HashMap<u32, ItemInfo>,
+    props: Vec<(HashSet<u32>, Property)>,
+}
 
 impl Heif {
     pub fn new<R: Read>(from: R) -> Result<Heif, Error> {
         let raw = mpeg::load_meta(from)?;
 
-        let handler = get_only_element(&raw.handler)?;
-        let primary_item = get_only_element(&raw.primary_item)?;
+        let handler = *get_only_element(&raw.handler)?;
+        let primary_item = u32(*get_only_element(&raw.primary_item)?);
 
         let mut locators = HashMap::with_capacity(4 * raw.item_locators.len());
         for item_locators in raw.item_locators {
@@ -49,17 +57,27 @@ impl Heif {
                     }
                 }
 
-                props.push((prop, associated_items));
+                // TODO: we're losing the essential status here
+                props.push((associated_items, prop));
             }
         }
 
+        let mut items = HashMap::new();
         for item_infos in raw.item_infos {
             for item_info in item_infos {
-                let id = u32(item_info.id);
+                match items.entry(u32(item_info.id)) {
+                    Entry::Occupied(_) => bail!("duplicate item id: {}", item_info.id),
+                    Entry::Vacant(vacancy) => vacancy.insert(item_info),
+                };
             }
         }
 
-        Ok(Heif {})
+        Ok(Heif {
+            handler,
+            primary_item,
+            items,
+            props,
+        })
     }
 }
 
