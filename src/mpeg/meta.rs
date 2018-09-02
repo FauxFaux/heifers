@@ -18,18 +18,18 @@ use mpeg::read_value_of_size;
 use mpeg::skip;
 use mpeg::Extent;
 use mpeg::FourCc;
-use mpeg::Item;
 use mpeg::ItemInfo;
+use mpeg::ItemLoc;
 
 // It's unclear that there should be at-least-, or precisely-, one of most of these.
 // TODO: It's probably specified.
 #[derive(Clone, Debug)]
 pub struct RawMeta {
-    handler: Vec<FourCc>,            // hdlr
-    primary_item: Vec<u16>,          // pitm
-    item_locators: Vec<Vec<Item>>,   // iloc
-    item_infos: Vec<Vec<ItemInfo>>,  // iinf
-    item_props: Vec<iprp::RawProps>, // iprp
+    pub handler: Vec<FourCc>,             // hdlr
+    pub primary_item: Vec<u16>,           // pitm
+    pub item_locators: Vec<Vec<ItemLoc>>, // iloc
+    pub item_infos: Vec<Vec<ItemInfo>>,   // iinf
+    pub item_props: Vec<iprp::RawProps>,  // iprp
 }
 
 pub fn parse<R: Read>(mut from: &mut Take<R>) -> Result<RawMeta, Error> {
@@ -95,7 +95,7 @@ pub fn parse_pitm<R: Read>(mut from: &mut Take<R>) -> Result<u16, Error> {
     Ok(from.read_u16::<BE>()?)
 }
 
-pub fn parse_iloc<R: Read>(mut from: &mut Take<R>) -> Result<Vec<Item>, Error> {
+pub fn parse_iloc<R: Read>(mut from: &mut Take<R>) -> Result<Vec<ItemLoc>, Error> {
     let extended = read_full_box_header(&mut from)?;
     ensure!(
         extended.version <= 2,
@@ -150,7 +150,7 @@ pub fn parse_iloc<R: Read>(mut from: &mut Take<R>) -> Result<Vec<Item>, Error> {
             })
         }
 
-        items.push(Item {
+        items.push(ItemLoc {
             id,
             data_reference_index,
             base_offset,

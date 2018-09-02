@@ -24,20 +24,20 @@ pub enum Property {
 
 #[derive(Clone, Debug)]
 pub struct RawProps {
-    containers: Vec<Vec<Property>>,
-    associations: Vec<Vec<ItemPropertyAssociation>>,
+    pub containers: Vec<Vec<Property>>,
+    pub associations: Vec<Vec<ItemPropertyAssociation>>,
 }
 
 #[derive(Clone, Debug)]
 pub struct ItemPropertyAssociation {
-    item_id: u32,
-    associations: Vec<Association>,
+    pub item_id: u32,
+    pub associations: Vec<Association>,
 }
 
 #[derive(Copy, Clone, Debug)]
-struct Association {
-    essential: bool,
-    property_index: u16,
+pub struct Association {
+    pub essential: bool,
+    pub property_index: u16,
 }
 
 #[derive(Clone, Debug)]

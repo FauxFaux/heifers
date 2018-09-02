@@ -53,7 +53,7 @@ pub struct FileType {
 }
 
 #[derive(Clone, Debug)]
-pub struct Item {
+pub struct ItemLoc {
     pub id: u32,
     pub data_reference_index: u16,
     pub base_offset: u64,
@@ -69,10 +69,10 @@ pub struct Extent {
 
 #[derive(Clone, Debug)]
 pub struct ItemInfo {
-    id: u16,
-    protection_index: u16,
-    item_type: FourCc,
-    item_name: String,
+    pub id: u16,
+    pub protection_index: u16,
+    pub item_type: FourCc,
+    pub item_name: String,
 }
 
 impl BoxHeader {
