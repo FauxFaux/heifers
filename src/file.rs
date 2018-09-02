@@ -11,14 +11,21 @@ use mpeg;
 use mpeg::iprp::Property;
 use mpeg::FourCc;
 use mpeg::ItemInfo;
+use mpeg::ItemLoc;
 
 // TODO: not Debug
 #[derive(Debug)]
 pub struct Heif {
     handler: FourCc,
     primary_item: u32,
-    items: HashMap<u32, ItemInfo>,
+    items: HashMap<u32, Item>,
     props: Vec<(HashSet<u32>, Property)>,
+}
+
+#[derive(Clone, Debug)]
+struct Item {
+    info: ItemInfo,
+    location: ItemLoc,
 }
 
 impl Heif {
@@ -64,13 +71,24 @@ impl Heif {
 
         let mut items = HashMap::new();
         for item_infos in raw.item_infos {
-            for item_info in item_infos {
-                match items.entry(u32(item_info.id)) {
-                    Entry::Occupied(_) => bail!("duplicate item id: {}", item_info.id),
-                    Entry::Vacant(vacancy) => vacancy.insert(item_info),
+            for info in item_infos {
+                let id = u32(info.id);
+                match items.entry(id) {
+                    Entry::Occupied(_) => bail!("duplicate item id: {}", id),
+                    Entry::Vacant(vacancy) => vacancy.insert(Item {
+                        info,
+                        location: locators
+                            .remove(&id)
+                            .ok_or_else(|| format_err!("no locator for item {}", id))?,
+                    }),
                 };
             }
         }
+
+        ensure!(
+            items.contains_key(&primary_item),
+            "primary item has no data"
+        );
 
         Ok(Heif {
             handler,
