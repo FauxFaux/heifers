@@ -21,6 +21,8 @@ use mpeg::FourCc;
 use mpeg::Item;
 use mpeg::ItemInfo;
 
+// It's unclear that there should be at-least-, or precisely-, one of most of these.
+// TODO: It's probably specified.
 #[derive(Clone, Debug)]
 pub struct RawMeta {
     handler: Vec<FourCc>,            // hdlr

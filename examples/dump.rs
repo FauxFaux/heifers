@@ -11,7 +11,7 @@ use failure::Error;
 fn main() -> Result<(), Error> {
     println!(
         "{:?}",
-        heifers::open(io::BufReader::new(fs::File::open(
+        heifers::Heif::new(io::BufReader::new(fs::File::open(
             env::args_os()
                 .nth(1)
                 .ok_or_else(|| format_err!("usage: filename"))?

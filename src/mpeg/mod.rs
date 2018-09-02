@@ -81,7 +81,35 @@ impl BoxHeader {
     }
 }
 
-pub fn read_header<R: Read>(mut from: R) -> Result<BoxHeader, Error> {
+pub fn load_meta<R: Read>(mut from: R) -> Result<meta::RawMeta, Error> {
+    let file_type = loop {
+        let header = read_header(&mut from)?;
+
+        match header.box_type {
+            FTYP => break parse_ftyp(&mut (&mut from).take(header.data_size()))?,
+            META | MOOV => bail!("invalid header before 'ftyp': {:?}", header),
+            _ => skip_box(&mut from, &header)?,
+        }
+    };
+
+    ensure!(
+        file_type.major_brand == HEIC || file_type.brands.contains(&HEIC),
+        "file is not an heic file: {:?}",
+        file_type
+    );
+
+    Ok(loop {
+        let header = read_header(&mut from)?;
+
+        match header.box_type {
+            META => break meta::parse(&mut (&mut from).take(header.data_size()))?,
+            FTYP | MOOV | MDAT => bail!("invalid header before 'meta': {:?}", header),
+            _ => skip_box(&mut from, &header)?,
+        }
+    })
+}
+
+fn read_header<R: Read>(mut from: R) -> Result<BoxHeader, Error> {
     let size_low = from.read_u32::<BE>()?;
     let box_type = FourCc(from.read_u32::<BE>()?);
 
