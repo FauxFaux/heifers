@@ -1,8 +1,11 @@
 use std::io::Read;
 
+use bitreader::BitReader;
 use byteorder::ReadBytesExt;
 use byteorder::BE;
 use failure::Error;
+
+mod pps;
 
 use bit::typenum;
 use bit::Bits;
@@ -44,4 +47,15 @@ fn nal_unit_header<R: Read>(mut from: R) -> Result<NalUnitHeader, Error> {
         nuh_layer_id,
         nuh_temporal_id_plus_1,
     })
+}
+
+fn read_uvlc(from: &mut BitReader) -> Result<u64, Error> {
+    let mut leading_zeros = 0;
+    while !from.read_bool()? {
+        leading_zeros += 1;
+
+        ensure!(leading_zeros <= 63, "too many leading zeros in uvlc");
+    }
+
+    Ok(from.read_u64(leading_zeros)? + (1 << leading_zeros) - 1)
 }

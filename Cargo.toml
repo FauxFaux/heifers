@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Chris West (Faux) <git@goeswhere.com>"]
 
 [dependencies]
+bitflags = "1"
 bitreader = "0.3"
 byteorder = "1"
 cast = "0.2"
