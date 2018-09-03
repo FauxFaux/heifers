@@ -6,10 +6,11 @@ use byteorder::ReadBytesExt;
 use byteorder::BE;
 use cast::u16;
 use cast::u32;
-use cast::u64;
 use cast::usize;
 use failure::Error;
 
+use bit::typenum;
+use bit::Bits;
 use mpeg::read_full_box_header;
 use mpeg::read_header;
 use mpeg::skip;
@@ -176,40 +177,34 @@ pub fn parse_ispe<R: Read>(mut from: &mut Take<R>) -> Result<(u32, u32), Error> 
     Ok((from.read_u32::<BE>()?, from.read_u32::<BE>()?))
 }
 
-pub fn parse_hvcc<R: Read>(from: &mut Take<R>) -> Result<Hvcc, Error> {
+pub fn parse_hvcc<R: Read>(mut from: &mut Take<R>) -> Result<Hvcc, Error> {
     let header = {
-        let mut fixed = [0u8; 22];
-        from.read_exact(&mut fixed)?;
-        let mut bits = BitReader::new(&fixed);
+        let mut bits = Bits::<typenum::U22>::read_exact(&mut from)?;
 
-        let configuration_version = bits.read_u8(8)?;
-        let general_profile_space = bits.read_u8(2)?;
-        let general_tier_flag = bits.read_bool()?;
-        let general_profile_idc = bits.read_u8(5)?;
-        let general_profile_compatibility_flags = bits.read_u32(32)?;
-        let general_constraint_indicator_flags = bits.read_u64(48)?;
-        let general_level_idc = bits.read_u8(8)?;
-        skip_reserved(&mut bits, 4)?;
-        let min_spatial_segmentation_idc = bits.read_u16(12)?;
-        skip_reserved(&mut bits, 6)?;
-        let parallelism_type = bits.read_u8(2)?;
-        skip_reserved(&mut bits, 6)?;
-        let chroma_format = bits.read_u8(2)?;
-        skip_reserved(&mut bits, 5)?;
-        let bit_depth_luma_minus8 = bits.read_u8(3)?;
-        skip_reserved(&mut bits, 5)?;
-        let bit_depth_chroma_minus8 = bits.read_u8(3)?;
-        let avg_frame_rate = bits.read_u16(16)?;
-        let constant_frame_rate = bits.read_u8(2)?;
-        let num_temporal_layers = bits.read_u8(3)?;
-        let temporal_id_nested = bits.read_bool()?;
-        let length_size_minus_one = bits.read_u8(2)?;
+        let configuration_version = bits.read_u8(8);
+        let general_profile_space = bits.read_u8(2);
+        let general_tier_flag = bits.read_bool();
+        let general_profile_idc = bits.read_u8(5);
+        let general_profile_compatibility_flags = bits.read_u32(32);
+        let general_constraint_indicator_flags = bits.read_u64(48);
+        let general_level_idc = bits.read_u8(8);
+        bits.skip(4);
+        let min_spatial_segmentation_idc = bits.read_u16(12);
+        bits.skip(6);
+        let parallelism_type = bits.read_u8(2);
+        bits.skip(6);
+        let chroma_format = bits.read_u8(2);
+        bits.skip(5);
+        let bit_depth_luma_minus8 = bits.read_u8(3);
+        bits.skip(5);
+        let bit_depth_chroma_minus8 = bits.read_u8(3);
+        let avg_frame_rate = bits.read_u16(16);
+        let constant_frame_rate = bits.read_u8(2);
+        let num_temporal_layers = bits.read_u8(3);
+        let temporal_id_nested = bits.read_bool();
+        let length_size_minus_one = bits.read_u8(2);
 
-        assert_eq!(
-            bits.position(),
-            8 * u64(fixed.len()),
-            "bitreader should be empty as we're done"
-        );
+        assert!(bits.done());
 
         HvccHeader {
             configuration_version,
@@ -255,10 +250,4 @@ pub fn parse_hvcc<R: Read>(from: &mut Take<R>) -> Result<Hvcc, Error> {
     }
 
     Ok(Hvcc { header, nals })
-}
-
-fn skip_reserved(bits: &mut BitReader, bit_count: u8) -> Result<(), Error> {
-    let _ = bits.read_u8(bit_count)?;
-    // TODO: validate this is ... unknown?
-    Ok(())
 }

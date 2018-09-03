@@ -3,7 +3,9 @@ use std::io::Read;
 
 use cast::u16;
 use cast::u32;
+use cast::u64;
 use cast::u8;
+use cast::usize;
 pub use generic_array::typenum;
 use generic_array::ArrayLength;
 use generic_array::GenericArray;
@@ -27,7 +29,7 @@ impl<N: ArrayLength<u8>> Bits<N> {
         self.data[byte] & mask == mask
     }
 
-    pub fn read_bits(&mut self, bits: u8) -> usize {
+    pub fn read_bits(&mut self, bits: u8) -> u64 {
         let mut ret = 0;
 
         for i in (0..bits).rev() {
@@ -52,6 +54,15 @@ impl<N: ArrayLength<u8>> Bits<N> {
     pub fn read_u32(&mut self, bits: u8) -> u32 {
         assert_le!(bits, 32);
         u32(self.read_bits(bits)).unwrap()
+    }
+
+    pub fn read_u64(&mut self, bits: u8) -> u64 {
+        assert_le!(bits, 64);
+        u64(self.read_bits(bits))
+    }
+
+    pub fn skip(&mut self, bits: u8) {
+        self.pos += usize(bits);
     }
 
     pub fn done(&self) -> bool {
