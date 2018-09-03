@@ -181,50 +181,29 @@ pub fn parse_hvcc<R: Read>(mut from: &mut Take<R>) -> Result<Hvcc, Error> {
     let header = {
         let mut bits = Bits::<typenum::U22>::read_exact(&mut from)?;
 
-        let configuration_version = bits.read_u8(8);
-        let general_profile_space = bits.read_u8(2);
-        let general_tier_flag = bits.read_bool();
-        let general_profile_idc = bits.read_u8(5);
-        let general_profile_compatibility_flags = bits.read_u32(32);
-        let general_constraint_indicator_flags = bits.read_u64(48);
-        let general_level_idc = bits.read_u8(8);
-        bits.skip(4);
-        let min_spatial_segmentation_idc = bits.read_u16(12);
-        bits.skip(6);
-        let parallelism_type = bits.read_u8(2);
-        bits.skip(6);
-        let chroma_format = bits.read_u8(2);
-        bits.skip(5);
-        let bit_depth_luma_minus8 = bits.read_u8(3);
-        bits.skip(5);
-        let bit_depth_chroma_minus8 = bits.read_u8(3);
-        let avg_frame_rate = bits.read_u16(16);
-        let constant_frame_rate = bits.read_u8(2);
-        let num_temporal_layers = bits.read_u8(3);
-        let temporal_id_nested = bits.read_bool();
-        let length_size_minus_one = bits.read_u8(2);
+        let header = HvccHeader {
+            configuration_version: bits.read_u8(8),
+            general_profile_space: bits.read_u8(2),
+            general_tier_flag: bits.read_bool(),
+            general_profile_idc: bits.read_u8(5),
+            general_profile_compatibility_flags: bits.read_u32(32),
+            general_constraint_indicator_flags: bits.read_u64(48),
+            general_level_idc: bits.read_u8(8),
+            min_spatial_segmentation_idc: bits.skip(4).read_u16(12),
+            parallelism_type: bits.skip(6).read_u8(2),
+            chroma_format: bits.skip(6).read_u8(2),
+            bit_depth_luma_minus8: bits.skip(5).read_u8(3),
+            bit_depth_chroma_minus8: bits.skip(5).read_u8(3),
+            avg_frame_rate: bits.read_u16(16),
+            constant_frame_rate: bits.read_u8(2),
+            num_temporal_layers: bits.read_u8(3),
+            temporal_id_nested: bits.read_bool(),
+            length_size_minus_one: bits.read_u8(2),
+        };
 
         assert!(bits.done());
 
-        HvccHeader {
-            configuration_version,
-            general_profile_space,
-            general_tier_flag,
-            general_profile_idc,
-            general_profile_compatibility_flags,
-            general_constraint_indicator_flags,
-            general_level_idc,
-            min_spatial_segmentation_idc,
-            parallelism_type,
-            chroma_format,
-            bit_depth_luma_minus8,
-            bit_depth_chroma_minus8,
-            avg_frame_rate,
-            constant_frame_rate,
-            num_temporal_layers,
-            temporal_id_nested,
-            length_size_minus_one,
-        }
+        header
     };
 
     let num_of_arrays = from.read_u8()?;

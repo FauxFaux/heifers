@@ -61,8 +61,9 @@ impl<N: ArrayLength<u8>> Bits<N> {
         u64(self.read_bits(bits))
     }
 
-    pub fn skip(&mut self, bits: u8) {
+    pub fn skip(&mut self, bits: u8) -> &mut Self {
         self.pos += usize(bits);
+        self
     }
 
     pub fn done(&self) -> bool {
