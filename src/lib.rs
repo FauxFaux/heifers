@@ -5,8 +5,11 @@ extern crate cast;
 extern crate failure;
 #[macro_use]
 extern crate more_asserts;
+extern crate generic_array;
 
+mod bit;
 mod file;
+pub mod hevc;
 pub mod mpeg;
 
 pub use file::Heif;

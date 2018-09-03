@@ -18,5 +18,8 @@ fn road() -> Result<(), Error> {
         .read_to_end(&mut data)?;
 
     assert_eq!(&bytes[333..], data.as_slice());
+
+    println!("{:?}", data);
+    println!("{:?}", heifers::hevc::dump(Cursor::new(data)));
     Ok(())
 }
