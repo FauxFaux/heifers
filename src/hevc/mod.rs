@@ -59,3 +59,11 @@ fn read_uvlc(from: &mut BitReader) -> Result<u64, Error> {
 
     Ok(from.read_u64(leading_zeros)? + (1 << leading_zeros) - 1)
 }
+
+fn rbsp_trailing_bits(from: &mut BitReader) -> Result<(), Error> {
+    ensure!(from.read_bool()?, "rbsp_trailing_bits must start with one");
+    while !from.is_aligned(1) {
+        ensure!(!from.read_bool()?, "rbsp_trailing_bits must be zeros");
+    }
+    Ok(())
+}
