@@ -6,7 +6,7 @@ use hevc::read_uvlc;
 
 bitflags! {
     #[derive(Default)]
-    struct Flags: usize {
+    struct Flags: u32 {
         const DEPENDENT_SLICE_SEGMENTS_ENABLED       = 1 <<  0;
         const OUTPUT_FLAG_PRESENT                    = 1 <<  1;
         const SIGN_DATA_HIDING_ENABLED               = 1 <<  2;
@@ -103,8 +103,7 @@ pub fn picture_parameter_set(from: &mut BitReader) -> Result<(), Error> {
         "can't handle pps extensions"
     );
 
-    // TODO: road violates the spec here, but it seems harmless:
-    // rbsp_trailing_bits(from)?;
+     rbsp_trailing_bits(from)?;
 
     Ok(())
 }
@@ -126,47 +125,13 @@ mod tests {
 
     #[test]
     fn pps() {
-        let bytes = [68, 1, 193, 114, 176, 98, 64];
+        let bytes = [193, 114, 176, 98, 64];
         hexdump::hexdump(&bytes);
-        // % echo 0 4401c172b06240 | xxd -r | xxd -b -c 7
-        // 00000000: 01000100 00000001 11000001 01110010 10110000 01100010 01000000  D..r.b@
-        // 010 id
-        // 00100 id
-        // 0 f
-        // 0 f
-        // 000 bits
-        // 0 f
-        // 0 f
-        // 1 l0
-        // 1 l1
-        // 1 init_qp_minus26
-        // 0 f
-        // 0 f
-        // 0 f
-        // 00101 pic_cb_qp_offset
-        // 1 cr
-        // 1 f
-        // 0 f
-        // 0 f
-        // 1 transquant_bypass_enable_flag
-        // 0 tiles
-        // 1 entropy
-        // 0 loop
-        // 1 control present
-        // 1 override enabled
-        // 0 deblocking filter
-        // 000011000
-        // 1 tc offset
-        // 0 scaling
-        // 0 mod
-        // 1 merge
-        // 0 header extension
-        // 0 pps extension
-        // 0000  D..r.b@
+
         let mut reader = BitReader::new(&bytes);
 
         super::picture_parameter_set(&mut reader).unwrap();
-        assert_eq!(52, reader.position(),
+        assert_eq!(33, reader.position(),
                    "check we got to the right place; not actually \
                    the right place due to an apparent spec violation in the file");
     }

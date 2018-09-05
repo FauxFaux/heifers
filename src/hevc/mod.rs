@@ -6,6 +6,7 @@ use byteorder::BE;
 use failure::Error;
 
 mod pps;
+mod vps;
 
 use bit::typenum;
 use bit::Bits;
