@@ -103,7 +103,7 @@ pub fn picture_parameter_set(from: &mut BitReader) -> Result<(), Error> {
         "can't handle pps extensions"
     );
 
-     rbsp_trailing_bits(from)?;
+    rbsp_trailing_bits(from)?;
 
     Ok(())
 }
@@ -119,20 +119,16 @@ fn read_flag(from: &mut BitReader, flag: Flags) -> Result<Flags, Error> {
 
 #[cfg(test)]
 mod tests {
-    extern crate hexdump;
-
     use bitreader::BitReader;
+    use cast::u64;
 
     #[test]
     fn pps() {
         let bytes = [193, 114, 176, 98, 64];
-        hexdump::hexdump(&bytes);
 
         let mut reader = BitReader::new(&bytes);
 
         super::picture_parameter_set(&mut reader).unwrap();
-        assert_eq!(33, reader.position(),
-                   "check we got to the right place; not actually \
-                   the right place due to an apparent spec violation in the file");
+        assert_eq!(u64(bytes.len()) * 8, reader.position());
     }
 }

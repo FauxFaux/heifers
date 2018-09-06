@@ -11,6 +11,3 @@ cast = "0.2"
 failure = "0.1"
 generic-array = "0.12"
 more-asserts = "0.2"
-
-[dev-dependencies]
-hexdump = "0.1"
