@@ -8,7 +8,7 @@ fn seq_parameter_set(from: &mut BitReader) -> Result<(), Error> {
     let sps_video_parameter_set_id = from.read_u8(4)?;
     let sps_max_sub_layers_minus1 = from.read_u8(3)?;
     let sps_temporal_id_nesting_flag = from.read_bool()?;
-    profile_tier_level(from, sps_max_sub_layers_minus1)?;
+    profile_tier_level(from, sps_max_sub_layers_minus1 + 1)?;
     let sps_seq_parameter_set_id = read_uvlc(from)?;
     let chroma_format_idc = read_uvlc(from)?;
     if 3 == chroma_format_idc {
@@ -28,7 +28,7 @@ fn seq_parameter_set(from: &mut BitReader) -> Result<(), Error> {
     let log2_max_pic_order_cnt_lsb_minus4 = read_uvlc(from)?;
     let sps_sub_layer_ordering_info_present_flag = from.read_bool()?;
     if sps_sub_layer_ordering_info_present_flag {
-        for i in 0..=sps_max_sub_layers_minus1 {
+        for i in 0..(sps_max_sub_layers_minus1 + 1) {
             let sps_max_dec_pic_buffering_minus1 = read_uvlc(from)?;
             let sps_max_num_reorder_pics = read_uvlc(from)?;
             let sps_max_latency_increase_plus1 = read_uvlc(from)?;
@@ -153,6 +153,23 @@ fn vui_parameters(from: &mut BitReader) -> Result<(), Error> {
     Ok(())
 }
 
+fn un_nal(bytes: &[u8]) -> Vec<u8> {
+    let mut ret = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if i < bytes.len() - 2 && 0x00 == bytes[i] && 0x00 == bytes[i + 1] && 0x03 == bytes[i + 2] {
+            ret.push(0);
+            ret.push(0);
+            i += 3;
+        } else {
+            ret.push(bytes[i]);
+            i += 1;
+        }
+    }
+
+    ret
+}
+
 #[cfg(test)]
 mod tests {
     use bitreader::BitReader;
@@ -163,8 +180,8 @@ mod tests {
             1, 4, 8, 0, 0, 3, 0, 159, 168, 0, 0, 3, 0, 0, 60, 160, 11, 72, 12, 31, 89, 110, 164,
             146, 138, 224, 16, 0, 0, 3, 0, 16, 0, 0, 3, 0, 16, 128,
         ];
-
-        let mut reader = BitReader::new(&bytes);
+        let un_nalled = super::un_nal(&bytes);
+        let mut reader = BitReader::new(&un_nalled);
 
         super::seq_parameter_set(&mut reader).unwrap();
     }
