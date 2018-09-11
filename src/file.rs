@@ -6,11 +6,14 @@ use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
 
+use bitreader::BitReader;
 use cast::u32;
 use cast::u64;
 use cast::usize;
 use failure::Error;
 
+use hevc;
+use hevc::pps;
 use mpeg;
 use mpeg::iprp::Property;
 use mpeg::Extent;
@@ -137,6 +140,29 @@ impl Heif {
             current_extent: 0,
             current_pos: 0,
         })
+    }
+
+    pub fn find_pps(&self, item: u32) -> Result<pps::PicParamSet, Error> {
+        for (ids, prop) in &self.props {
+            if !ids.contains(&item) {
+                continue;
+            }
+
+            if let Property::HvcCodecSettings(hvcc) = prop {
+                for nal in &hvcc.nals {
+                    if hevc::NAL_PPS_NUT == nal.completeness_and_nal_unit_type {
+                        ensure!(1 == nal.units.len(), "expecting only one unit");
+                        let bytes = &nal.units[0];
+                        // TODO: validate NAL unit header, 2..
+                        return Ok(pps::picture_parameter_set(&mut BitReader::new(
+                            &bytes[2..],
+                        ))?);
+                    }
+                }
+            }
+        }
+
+        bail!("not found");
     }
 }
 

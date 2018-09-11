@@ -6,7 +6,7 @@ use hevc::read_uvlc;
 
 bitflags! {
     #[derive(Default)]
-    struct Flags: u32 {
+    pub struct Flags: u32 {
         const DEPENDENT_SLICE_SEGMENTS_ENABLED       = 1 <<  0;
         const OUTPUT_FLAG_PRESENT                    = 1 <<  1;
         const SIGN_DATA_HIDING_ENABLED               = 1 <<  2;
@@ -33,7 +33,14 @@ bitflags! {
     }
 }
 
-pub fn picture_parameter_set(from: &mut BitReader) -> Result<(), Error> {
+#[derive(Copy, Clone, Debug)]
+pub struct PicParamSet {
+    pub pps_pic_parameter_set_id: u64,
+    pub pps_seq_parameter_set_id: u64,
+    pub flags: Flags,
+}
+
+pub fn picture_parameter_set(from: &mut BitReader) -> Result<PicParamSet, Error> {
     let mut flags = Flags::default();
 
     let pps_pic_parameter_set_id = read_uvlc(from)?;
@@ -105,7 +112,11 @@ pub fn picture_parameter_set(from: &mut BitReader) -> Result<(), Error> {
 
     rbsp_trailing_bits(from)?;
 
-    Ok(())
+    Ok(PicParamSet {
+        pps_pic_parameter_set_id,
+        pps_seq_parameter_set_id,
+        flags,
+    })
 }
 
 #[inline]

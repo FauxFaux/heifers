@@ -5,11 +5,13 @@ use byteorder::ReadBytesExt;
 use byteorder::BE;
 use failure::Error;
 
-mod pps;
+pub mod pps;
+mod ss;
 mod vps;
 
 use bit::typenum;
 use bit::Bits;
+use hevc::pps::PicParamSet;
 
 #[derive(Copy, Clone, Debug)]
 struct NalUnitHeader {
@@ -18,15 +20,30 @@ struct NalUnitHeader {
     nuh_temporal_id_plus_1: u8,
 }
 
-const NAL_SLICE_SEGMENT_LAYER: u8 = 19;
+const NAL_BLA_W_LP: u8 = 16;
+const NAL_BLA_W_RADL: u8 = 17;
+const NAL_BLA_N_LP: u8 = 18;
+const NAL_IDR_W_RADL: u8 = 19;
+const NAL_IDR_N_LP: u8 = 20;
+const NAL_CRA_NUT: u8 = 21;
+const NAL_RSV_IRAP_VCL22: u8 = 22;
+const NAL_RSV_IRAP_VCL23: u8 = 23;
 
-pub fn dump<R: Read>(from: R) -> Result<(), Error> {
-    let nal_unit_header = nal_unit_header(from)?;
+pub const NAL_PPS_NUT: u8 = 34;
+
+pub fn dump<R: Read>(mut from: R, pps: &PicParamSet) -> Result<(), Error> {
+    let nal_unit_header = nal_unit_header(&mut from)?;
 
     ensure!(
-        NAL_SLICE_SEGMENT_LAYER == nal_unit_header.unit_type,
-        "only supports segment layers"
+        nal_unit_header.unit_type >= NAL_BLA_W_LP && nal_unit_header.unit_type <= NAL_CRA_NUT,
+        "only supports segment layers, not {}",
+        nal_unit_header.unit_type
     );
+
+    let mut v = Vec::new();
+    from.read_to_end(&mut v)?;
+
+    ss::slice_segment_header(nal_unit_header.unit_type, &mut BitReader::new(&v), pps)?;
 
     println!("{:?}", nal_unit_header);
     Ok(())

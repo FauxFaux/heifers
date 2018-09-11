@@ -44,7 +44,7 @@ pub struct Association {
 #[derive(Clone, Debug)]
 pub struct Hvcc {
     header: HvccHeader,
-    nals: Vec<Nal>,
+    pub nals: Vec<Nal>,
 }
 
 // what an absolute unit
@@ -70,9 +70,9 @@ struct HvccHeader {
 }
 
 #[derive(Clone, Debug)]
-struct Nal {
-    completeness_and_nal_unit_type: u8,
-    units: Vec<Vec<u8>>,
+pub struct Nal {
+    pub completeness_and_nal_unit_type: u8,
+    pub units: Vec<Vec<u8>>,
 }
 
 pub fn parse_iprp<R: Read>(mut from: &mut Take<R>) -> Result<RawProps, Error> {
