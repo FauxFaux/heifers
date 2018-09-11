@@ -1,0 +1,78 @@
+video_parameter_set_id                     0
+sps_max_sub_layers                         1
+sps_temporal_id_nesting_flag               1
+  general_profile_space                    0
+  general_tier_flag                        0
+  general_profile_idc                      FormatRangeExtensions
+  general_profile_compatibility_flags      0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    general_progressive_source_flag        1
+    general_interlaced_source_flag         0
+    general_non_packed_constraint_flag     0
+    general_frame_only_constraint_flag     1
+  general_level_idc                        60 (2.00)
+seq_parameter_set_id                       0
+chroma_format_idc                          1 (4:2:0)
+pic_width_in_luma_samples                  360
+pic_height_in_luma_samples                 192
+conformance_window_flag                    1
+conf_win_left_offset                       0
+conf_win_right_offset                      0
+conf_win_top_offset                        0
+conf_win_bottom_offset                     1
+bit_depth_luma                             8
+bit_depth_chroma                           8
+log2_max_pic_order_cnt_lsb                 8
+sps_sub_layer_ordering_info_present_flag   1
+Layer 0
+  sps_max_dec_pic_buffering                3
+  sps_max_num_reorder_pics                 0
+  sps_max_latency_increase_plus1           1
+log2_min_luma_coding_block_size            3
+log2_diff_max_min_luma_coding_block_size   3
+log2_min_transform_block_size              2
+log2_diff_max_min_transform_block_size     3
+max_transform_hierarchy_depth_inter        0
+max_transform_hierarchy_depth_intra        1
+scaling_list_enable_flag                   0
+amp_enabled_flag                           0
+sample_adaptive_offset_enabled_flag        1
+pcm_enabled_flag                           0
+num_short_term_ref_pic_sets                0
+long_term_ref_pics_present_flag            0
+sps_temporal_mvp_enabled_flag              1
+strong_intra_smoothing_enable_flag         1
+vui_parameters_present_flag                1
+sps_extension_present_flag                 0
+sps_range_extension_flag                   0
+sps_multilayer_extension_flag              0
+sps_extension_6bits                        0
+CtbSizeY                                   64
+MinCbSizeY                                 8
+MaxCbSizeY                                 64
+MinTBSizeY                                 4
+MaxTBSizeY                                 32
+PicWidthInCtbsY                            6
+PicHeightInCtbsY                           3
+SubWidthC                                  2
+SubHeightC                                 2
+----------------- VUI -----------------
+sample aspect ratio                        0:0
+overscan_info_present_flag                 0
+overscan_appropriate_flag                  0
+video_signal_type_present_flag             0
+chroma_loc_info_present_flag               0
+neutral_chroma_indication_flag             0
+field_seq_flag                             0
+frame_field_info_present_flag              0
+default_display_window_flag                0
+  def_disp_win_left_offset                 0
+  def_disp_win_right_offset                0
+  def_disp_win_top_offset                  0
+  def_disp_win_bottom_offset               0
+vui_timing_info_present_flag               1
+  vui_num_units_in_tick                    1
+  vui_time_scale                           1
+vui_poc_proportional_to_timing_flag        0
+vui_num_ticks_poc_diff_one                 8
+vui_hrd_parameters_present_flag            0
+bitstream_restriction_flag                 0

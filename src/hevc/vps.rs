@@ -36,6 +36,7 @@ pub fn profile_tier_level(from: &mut BitReader, max_sub_layers: u8) -> Result<()
     let general_frame_only_constraint_flag = from.read_bool()?;
     let _reserved = from.read_u64(44)?;
     let general_level_idc = from.read_u8(8)?;
+    assert_eq!(60, general_level_idc);
     let mut sub_layer_profile_present_flag = vec![false; usize(max_sub_layers)];
     let mut sub_layer_level_present_flag = vec![false; usize(max_sub_layers)];
     for i in 0..max_sub_layers {

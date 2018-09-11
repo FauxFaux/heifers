@@ -8,7 +8,8 @@ fn seq_parameter_set(from: &mut BitReader) -> Result<(), Error> {
     let sps_video_parameter_set_id = from.read_u8(4)?;
     let sps_max_sub_layers_minus1 = from.read_u8(3)?;
     let sps_temporal_id_nesting_flag = from.read_bool()?;
-    profile_tier_level(from, sps_max_sub_layers_minus1 + 1)?;
+    // minus1 here is complicated, it appears to actually want the minus1
+    profile_tier_level(from, sps_max_sub_layers_minus1)?;
     let sps_seq_parameter_set_id = read_uvlc(from)?;
     let chroma_format_idc = read_uvlc(from)?;
     if 3 == chroma_format_idc {
@@ -62,8 +63,9 @@ fn seq_parameter_set(from: &mut BitReader) -> Result<(), Error> {
     }
 
     let num_short_term_ref_pic_sets = read_uvlc(from)?;
+    println!("{}", num_short_term_ref_pic_sets);
     for i in 0..num_short_term_ref_pic_sets {
-        bail!("short_term_ref_pic_set(i);");
+        short_term_ref_pic_set(from, num_short_term_ref_pic_sets, i)?;
     }
     let long_term_ref_pics_present_flag = from.read_bool()?;
     if long_term_ref_pics_present_flag {
@@ -153,6 +155,45 @@ fn vui_parameters(from: &mut BitReader) -> Result<(), Error> {
     Ok(())
 }
 
+fn short_term_ref_pic_set(
+    from: &mut BitReader,
+    num_short_term_ref_pic_sets: u64,
+    st_rps_idx: u64,
+) -> Result<(), Error> {
+    let inter_ref_pic_set_prediction_flag = if st_rps_idx != 0 {
+        from.read_bool()?
+    } else {
+        false
+    };
+
+    if inter_ref_pic_set_prediction_flag {
+        bail!("unimplemented inter-ref");
+        if st_rps_idx == num_short_term_ref_pic_sets {
+            let delta_idx_minus1 = read_uvlc(from)?;
+        }
+        let delta_rps_sign = from.read_bool()?;
+        let abs_delta_rps_minus1 = read_uvlc(from)?;
+        for j in 0..unimplemented!("NumDeltaPocs[RefRpsIdx]") {
+            let used_by_curr_pic_flag = from.read_bool()?;
+            if !used_by_curr_pic_flag {
+                let use_delta_flag = from.read_bool()?;
+            }
+        }
+    } else {
+        let num_negative_pics = read_uvlc(from)?;
+        let num_positive_pics = read_uvlc(from)?;
+        for i in 0..num_negative_pics {
+            let delta_poc_s0_minus1 = read_uvlc(from)?;
+            let used_by_curr_pic_s0_flag = from.read_bool()?;
+        }
+        for i in 0..num_positive_pics {
+            let delta_poc_s1_minus1 = read_uvlc(from)?;
+            let used_by_curr_pic_s1_flag = from.read_bool()?;
+        }
+    }
+    Ok(())
+}
+
 fn un_nal(bytes: &[u8]) -> Vec<u8> {
     let mut ret = Vec::with_capacity(bytes.len());
     let mut i = 0;
@@ -181,6 +222,7 @@ mod tests {
             146, 138, 224, 16, 0, 0, 3, 0, 16, 0, 0, 3, 0, 16, 128,
         ];
         let un_nalled = super::un_nal(&bytes);
+        println!("{:?}", un_nalled);
         let mut reader = BitReader::new(&un_nalled);
 
         super::seq_parameter_set(&mut reader).unwrap();
