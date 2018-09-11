@@ -25,7 +25,7 @@ pub fn video_parameter_set(from: &mut BitReader) -> Result<(), Error> {
     Ok(())
 }
 
-fn profile_tier_level(from: &mut BitReader, max_sub_layers: u8) -> Result<(), Error> {
+pub fn profile_tier_level(from: &mut BitReader, max_sub_layers: u8) -> Result<(), Error> {
     let general_profile_space = from.read_u8(2)?;
     let general_tier_flag = from.read_bool()?;
     let general_profile_idc = from.read_u8(5)?;
