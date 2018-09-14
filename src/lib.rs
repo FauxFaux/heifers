@@ -5,9 +5,10 @@ extern crate byteorder;
 extern crate cast;
 #[macro_use]
 extern crate failure;
+extern crate generic_array;
 #[macro_use]
 extern crate more_asserts;
-extern crate generic_array;
+extern crate twoway;
 
 mod bit;
 mod file;
