@@ -1,74 +1,60 @@
-use std::io::BufRead;
+use std::io::Bytes;
+use std::io::Read;
 
 use failure::Error;
 use twoway;
 
-struct NalReader<R: BufRead> {
-    inner: R,
+struct NalReader<R: Read> {
+    inner: Bytes<R>,
 }
 
-impl<R: BufRead> NalReader<R> {
+impl<R: Read> NalReader<R> {
     pub fn new(inner: R) -> Self {
-        NalReader { inner }
+        NalReader {
+            inner: inner.bytes(),
+        }
     }
 
     pub fn read_nal(&mut self) -> Result<Option<Vec<u8>>, Error> {
-        if self.inner.fill_buf()?.is_empty() {
-            return Ok(None);
-        }
+        let mut first = match self.inner.next() {
+            Some(byte) => byte?,
+            None => return Ok(None),
+        };
+
+        let mut second = match self.inner.next() {
+            Some(byte) => byte?,
+            None => return Ok(Some(vec![first])),
+        };
 
         let mut nal = Vec::with_capacity(4096);
-        loop {
-            enum Action {
-                Consume,
-                Break,
-                CheckProgress,
-            }
 
-            let (action, consume) = {
-                let buf = self.inner.fill_buf()?;
+        nal.push(first);
+        nal.push(second);
 
-                match buf.len() {
-                    0 => break,
-                    1 | 2 => (Action::CheckProgress, buf.len()),
-                    _ => if let Some(end) = twoway::find_bytes(buf, &[0, 0, 1]) {
-                        nal.extend(&buf[..end]);
-                        (Action::Break, end + 3)
-                    } else {
-                        let safe = buf.len() - 2;
-                        nal.extend(&buf[..safe]);
-                        (Action::Consume, safe)
-                    },
-                }
-            };
+        while let Some(byte) = self.inner.next() {
+            let byte = byte?;
+            if 0x00 == first && 0x00 == second {
+                if 0x01 == byte {
+                    // TODO: understand which specs allow an extra zero
+                    // we don't want the two extra zeros in the array
+                    nal.pop();
+                    nal.pop();
 
-            match action {
-                Action::Break => {
-                    self.inner.consume(consume);
                     break;
                 }
-                Action::Consume => {
-                    self.inner.consume(consume);
-                }
-                Action::CheckProgress => {
-                    let remaining = {
-                        let buf = self.inner.fill_buf()?;
-                        if buf.len() == consume {
-                            // no further progress, we're at the end of the file
-                            // can't contain a marker as it's too short
-                            nal.extend(buf);
-                            buf.len()
-                        } else {
-                            0
-                        }
-                    };
-                    self.inner.consume(remaining);
-                }
-            }
-        }
 
-        while let Some(pos) = twoway::rfind_bytes(&nal, &[0, 0, 3]) {
-            nal.remove(pos + 2);
+                if 0x03 == byte {
+                    second = 0x03;
+                    continue;
+                }
+
+                // TODO: deny other values, for validation?
+            }
+
+            first = second;
+            second = byte;
+
+            nal.push(byte);
         }
 
         Ok(Some(nal))
@@ -81,10 +67,26 @@ mod tests {
 
     use super::NalReader;
 
+    fn nal_read(input: &[u8]) -> Vec<Vec<u8>> {
+        let mut reader = NalReader::new(io::Cursor::new(input));
+        let mut ret = Vec::new();
+        while let Some(nal) = reader.read_nal().expect("reading nal") {
+            ret.push(nal);
+        }
+
+        ret
+    }
+
     #[test]
     fn no_terminator() {
-        NalReader::new(io::Cursor::new(b"hello"))
-            .read_nal()
-            .unwrap();
+        assert_eq!(vec![b"hello".to_vec()], nal_read(b"hello"));
+        assert_eq!(
+            vec![b"hello".to_vec(), b"bye".to_vec()],
+            nal_read(b"hello\x00\x00\x01bye")
+        );
+        assert_eq!(vec![b"hello".to_vec()], nal_read(b"hello\x00\x00\x01"));
+        assert_eq!(vec![vec![0u8; 0]], nal_read(&[0, 0, 1]));
+        assert_eq!(vec![[0, 0].to_vec()], nal_read(&[0, 0, 3]));
+        assert_eq!(vec![[0, 0, 7].to_vec()], nal_read(&[0, 0, 3, 7]));
     }
 }
