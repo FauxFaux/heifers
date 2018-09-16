@@ -4,15 +4,18 @@ use failure::Error;
 use hevc::pps;
 use hevc::pps::PicParamSet;
 use hevc::read_uvlc;
+use hevc::sps;
+use hevc::sps::SeqParamSet;
 
 pub fn slice_segment_header(
-    unit_type: u8,
+    nal_unit_type: u8,
     from: &mut BitReader,
     pps: &PicParamSet,
+    sps: &SeqParamSet,
 ) -> Result<(), Error> {
     let first_slice_segment_in_pic_flag = from.read_bool()?;
 
-    if unit_type >= super::NAL_BLA_W_LP && unit_type <= super::NAL_RSV_IRAP_VCL23 {
+    if nal_unit_type >= super::NAL_BLA_W_LP && nal_unit_type <= super::NAL_RSV_IRAP_VCL23 {
         let no_output_of_prior_pics_flag = from.read_bool()?;
     }
 
@@ -29,27 +32,28 @@ pub fn slice_segment_header(
     }
 
     if !dependent_slice_segment_flag {
-        let _slice_reserved_flag = from.read_u64(num_extra_slice_header_bits)?;
-        let slice_type = read_uvle(from)?;
-        if output_flag_present_flag {
+        let _slice_reserved_flag = from.read_u64(pps.num_extra_slice_header_bits)?;
+        let slice_type = read_uvlc(from)?;
+        if pps.flags.contains(pps::Flags::OUTPUT_FLAG_PRESENT) {
             let pic_output_flag = from.read_bool()?;
         }
-        if separate_colour_plane_flag == 1 {
+        if pps.flags.contains(pps::Flags::SEPARATE_COLOUR_PLANE) {
             let colour_plane_id = from.read_u8(2)?;
         }
-        if nal_unit_type != IDR_W_RADL && nal_unit_type != IDR_N_LP {
-            let slice_pic_order_cnt_lsb = from.read_u64(log2_max_pic_order_cnt_lsb_minus4 + 4)?;
+        if nal_unit_type != super::NAL_IDR_W_RADL && nal_unit_type != super::NAL_IDR_N_LP {
+            let slice_pic_order_cnt_lsb =
+                from.read_u64(sps.log2_max_pic_order_cnt_lsb_minus4 + 4)?;
             let short_term_ref_pic_set_sps_flag = from.read_bool()?;
             if !short_term_ref_pic_set_sps_flag {
-                short_term_ref_pic_set(num_short_term_ref_pic_sets)
-            } else if num_short_term_ref_pic_sets > 1 {
+                bail!("short_term_ref_pic_set(num_short_term_ref_pic_sets)");
+            } else if sps.num_short_term_ref_pic_sets > 1 {
                 bail!("short_term_ref_pic_set_idx u(v)")
             }
-            if long_term_ref_pics_present_flag {
+            if sps.flags.contains(sps::Flags::LONG_TERM_REF_PICS_PRESENT) {
                 if num_long_term_ref_pics_sps > 0 {
-                    let num_long_term_sps = read_uvle(from)?;
+                    let num_long_term_sps = read_uvlc(from)?;
                 }
-                num_long_term_pics = read_uvle(from)?;
+                num_long_term_pics = read_uvlc(from)?;
                 for i in 0..(num_long_term_sps + num_long_term_pics) {
                     if i < num_long_term_sps {
                         if num_long_term_ref_pics_sps > 1 {
@@ -61,7 +65,7 @@ pub fn slice_segment_header(
                     }
                     delta_poc_msb_present_flag[i] = from.read_bool()?;
                     if delta_poc_msb_present_flag[i] {
-                        delta_poc_msb_cycle_lt[i] = read_uvle(from)?;
+                        delta_poc_msb_cycle_lt[i] = read_uvlc(from)?;
                     }
                 }
             }
@@ -76,9 +80,9 @@ pub fn slice_segment_header(
         if slice_type == P || slice_type == B {
             let num_ref_idx_active_override_flag = from.read_bool()?;
             if num_ref_idx_active_override_flag {
-                let num_ref_idx_l0_active_minus1 = read_uvle(from)?;
+                let num_ref_idx_l0_active_minus1 = read_uvlc(from)?;
                 if slice_type == B {
-                    let num_ref_idx_l1_active_minus1 = read_uvle(from)?;
+                    let num_ref_idx_l1_active_minus1 = read_uvlc(from)?;
                 }
             }
             if lists_modification_present_flag && NumPocTotalCurr > 1 {
@@ -97,14 +101,14 @@ pub fn slice_segment_header(
                 if (collocated_from_l0_flag && num_ref_idx_l0_active_minus1 > 0)
                     || (!collocated_from_l0_flag && num_ref_idx_l1_active_minus1 > 0)
                 {
-                    let collocated_ref_idx = read_uvle(from)?;
+                    let collocated_ref_idx = read_uvlc(from)?;
                 }
             }
             if (weighted_pred_flag && slice_type == P) || (weighted_bipred_flag && slice_type == B)
             {
                 pred_weight_table()
             }
-            let five_minus_max_num_merge_cand = read_uvle(from)?;
+            let five_minus_max_num_merge_cand = read_uvlc(from)?;
         }
         let slice_qp_delta = read_uvlc(from)?; // TODO: signed
         if pps_slice_chroma_qp_offsets_present_flag {

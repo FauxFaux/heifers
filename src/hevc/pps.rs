@@ -37,6 +37,7 @@ bitflags! {
 pub struct PicParamSet {
     pub pps_pic_parameter_set_id: u64,
     pub pps_seq_parameter_set_id: u64,
+    pub num_extra_slice_header_bits: u8,
     pub flags: Flags,
 }
 
@@ -115,6 +116,7 @@ pub fn picture_parameter_set(from: &mut BitReader) -> Result<PicParamSet, Error>
     Ok(PicParamSet {
         pps_pic_parameter_set_id,
         pps_seq_parameter_set_id,
+        num_extra_slice_header_bits,
         flags,
     })
 }
