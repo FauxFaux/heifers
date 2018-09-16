@@ -1,4 +1,5 @@
 use bitreader::BitReader;
+use cast::u8;
 use failure::Error;
 
 use hevc::rbsp_trailing_bits;
@@ -28,26 +29,28 @@ bitflags! {
 }
 
 pub struct SeqParamSet {
-    pub log2_max_pic_order_cnt_lsb_minus4: u64,
+    pub log2_max_pic_order_cnt_lsb_minus4: u8,
+    pub num_short_term_ref_pic_sets: u8,
+    pub num_long_term_ref_pics_sps: u8,
     pub flags: Flags,
 }
 
-fn seq_parameter_set(from: &mut BitReader) -> Result<SeqParamSet, Error> {
+pub fn seq_parameter_set(from: &mut BitReader) -> Result<SeqParamSet, Error> {
     let mut flags = Flags::default();
 
     let sps_video_parameter_set_id = from.read_u8(4)?;
     let sps_max_sub_layers_minus1 = from.read_u8(3)?;
-    flags |= read_flag(from, Flags::sps_temporal_id_nesting)?;
+    flags |= read_flag(from, Flags::SPS_TEMPORAL_ID_NESTING)?;
     // minus1 here is complicated, it appears to actually want the minus1
     profile_tier_level(from, sps_max_sub_layers_minus1)?;
     let sps_seq_parameter_set_id = read_uvlc(from)?;
     let chroma_format_idc = read_uvlc(from)?;
     if 3 == chroma_format_idc {
-        flags |= read_flag(from, Flags::separate_colour_plane)?;
+        flags |= read_flag(from, Flags::SEPARATE_COLOUR_PLANE)?;
     }
     let pic_width_in_luma_samples = read_uvlc(from)?;
     let pic_height_in_luma_samples = read_uvlc(from)?;
-    flags |= read_flag(from, Flags::conformance_window)?;
+    flags |= read_flag(from, Flags::CONFORMANCE_WINDOW)?;
     if flags.contains(Flags::CONFORMANCE_WINDOW) {
         let conf_win_left_offset = read_uvlc(from)?;
         let conf_win_right_offset = read_uvlc(from)?;
@@ -56,8 +59,16 @@ fn seq_parameter_set(from: &mut BitReader) -> Result<SeqParamSet, Error> {
     }
     let bit_depth_luma_minus8 = read_uvlc(from)?;
     let bit_depth_chroma_minus8 = read_uvlc(from)?;
-    let log2_max_pic_order_cnt_lsb_minus4 = read_uvlc(from)?;
-    flags |= read_flag(from, Flags::sps_sub_layer_ordering_info_present)?;
+    let log2_max_pic_order_cnt_lsb_minus4 = {
+        let val = read_uvlc(from)?;
+        ensure!(
+            val <= 12,
+            "log2_max_pic_order_cnt_lsb_minus4 out of range: {}",
+            val
+        );
+        u8(val).unwrap()
+    };
+    flags |= read_flag(from, Flags::SPS_SUB_LAYER_ORDERING_INFO_PRESENT)?;
     if flags.contains(Flags::SPS_SUB_LAYER_ORDERING_INFO_PRESENT) {
         for i in 0..(sps_max_sub_layers_minus1 + 1) {
             let sps_max_dec_pic_buffering_minus1 = read_uvlc(from)?;
@@ -72,52 +83,73 @@ fn seq_parameter_set(from: &mut BitReader) -> Result<SeqParamSet, Error> {
     let log2_diff_max_min_transform_block_size = read_uvlc(from)?;
     let max_transform_hierarchy_depth_inter = read_uvlc(from)?;
     let max_transform_hierarchy_depth_intra = read_uvlc(from)?;
-    flags |= read_flag(from, Flags::scaling_list_enabled)?;
+    flags |= read_flag(from, Flags::SCALING_LIST_ENABLED)?;
     if flags.contains(Flags::SCALING_LIST_ENABLED) {
-        flags |= read_flag(from, Flags::sps_scaling_list_data_present)?;
+        flags |= read_flag(from, Flags::SPS_SCALING_LIST_DATA_PRESENT)?;
         if flags.contains(Flags::SPS_SCALING_LIST_DATA_PRESENT) {
             bail!("scaling_list_data()");
         }
     }
 
-    flags |= read_flag(from, Flags::amp_enabled)?;
-    flags |= read_flag(from, Flags::sample_adaptive_offset_enabled)?;
-    flags |= read_flag(from, Flags::pcm_enabled)?;
+    flags |= read_flag(from, Flags::AMP_ENABLED)?;
+    flags |= read_flag(from, Flags::SAMPLE_ADAPTIVE_OFFSET_ENABLED)?;
+    flags |= read_flag(from, Flags::PCM_ENABLED)?;
 
-    if flags.contains(Flags::pcm_enabled) {
+    if flags.contains(Flags::PCM_ENABLED) {
         let pcm_sample_bit_depth_luma_minus1 = from.read_u8(4)?;
         let pcm_sample_bit_depth_chroma_minus1 = from.read_u8(4)?;
         let log2_min_pcm_luma_coding_block_size_minus3 = read_uvlc(from)?;
         let log2_diff_max_min_pcm_luma_coding_block_size = read_uvlc(from)?;
-        flags |= read_flag(from, Flags::pcm_loop_filter_disabled)?;
+        flags |= read_flag(from, Flags::PCM_LOOP_FILTER_DISABLED)?;
     }
 
-    let num_short_term_ref_pic_sets = read_uvlc(from)?;
+    let num_short_term_ref_pic_sets = {
+        let val = read_uvlc(from)?;
+        ensure!(
+            val <= 64,
+            "num_short_term_ref_pic_sets out of range: {}",
+            val
+        );
+        u8(val).unwrap()
+    };
     for i in 0..num_short_term_ref_pic_sets {
         short_term_ref_pic_set(from, num_short_term_ref_pic_sets, i)?;
     }
-    flags |= read_flag(from, Flags::long_term_ref_pics_present)?;
-    if flags.contains(Flags::long_term_ref_pics_present) {
-        let num_long_term_ref_pics_sps = read_uvlc(from)?;
+    flags |= read_flag(from, Flags::LONG_TERM_REF_PICS_PRESENT)?;
+    let mut num_long_term_ref_pics_sps = 0u8;
+    if flags.contains(Flags::LONG_TERM_REF_PICS_PRESENT) {
+        num_long_term_ref_pics_sps = {
+            let val = read_uvlc(from)?;
+            ensure!(
+                val <= 32,
+                "num_long_term_ref_pics_sps out of range: {}",
+                val
+            );
+            u8(val).unwrap()
+        };
+
         for i in 0..num_long_term_ref_pics_sps {
             let lt_ref_pic_poc_lsb_sps = read_uvlc(from)?;
-            flags |= read_flag(from, Flags::used_by_curr_pic_lt_sps)?;
+            flags |= read_flag(from, Flags::USED_BY_CURR_PIC_LT_SPS)?;
         }
     }
-    flags |= read_flag(from, Flags::sps_temporal_mvp_enabled)?;
-    flags |= read_flag(from, Flags::strong_intra_smoothing_enabled)?;
-    flags |= read_flag(from, Flags::vui_parameters_present)?;
-    if flags.contains(Flags::vui_parameters_present) {
+    flags |= read_flag(from, Flags::SPS_TEMPORAL_MVP_ENABLED)?;
+    flags |= read_flag(from, Flags::STRONG_INTRA_SMOOTHING_ENABLED)?;
+    flags |= read_flag(from, Flags::VUI_PARAMETERS_PRESENT)?;
+    if flags.contains(Flags::VUI_PARAMETERS_PRESENT) {
         vui_parameters(from)?;
     }
-    flags |= read_flag(from, Flags::sps_extension)?;
+    flags |= read_flag(from, Flags::SPS_EXTENSION)?;
     ensure!(
-        !flags.contains(Flags::sps_extension),
+        !flags.contains(Flags::SPS_EXTENSION),
         "unsupported sps extension"
     );
     rbsp_trailing_bits(from)?;
     Ok(SeqParamSet {
         log2_max_pic_order_cnt_lsb_minus4,
+        num_short_term_ref_pic_sets,
+        num_long_term_ref_pics_sps,
+        flags,
     })
 }
 
@@ -191,8 +223,8 @@ fn vui_parameters(from: &mut BitReader) -> Result<(), Error> {
 
 fn short_term_ref_pic_set(
     from: &mut BitReader,
-    num_short_term_ref_pic_sets: u64,
-    st_rps_idx: u64,
+    num_short_term_ref_pic_sets: u8,
+    st_rps_idx: u8,
 ) -> Result<(), Error> {
     let inter_ref_pic_set_prediction_flag = if st_rps_idx != 0 {
         from.read_bool()?

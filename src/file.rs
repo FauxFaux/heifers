@@ -14,6 +14,7 @@ use failure::Error;
 
 use hevc;
 use hevc::pps;
+use hevc::sps;
 use mpeg;
 use mpeg::iprp::Property;
 use mpeg::Extent;
@@ -157,6 +158,28 @@ impl Heif {
                         return Ok(pps::picture_parameter_set(&mut BitReader::new(
                             &bytes[2..],
                         ))?);
+                    }
+                }
+            }
+        }
+
+        bail!("not found");
+    }
+
+    // TODO: generic?
+    pub fn find_sps(&self, item: u32) -> Result<sps::SeqParamSet, Error> {
+        for (ids, prop) in &self.props {
+            if !ids.contains(&item) {
+                continue;
+            }
+
+            if let Property::HvcCodecSettings(hvcc) = prop {
+                for nal in &hvcc.nals {
+                    if hevc::NAL_SPS_NUT == nal.completeness_and_nal_unit_type {
+                        ensure!(1 == nal.units.len(), "expecting only one unit");
+                        let bytes = &nal.units[0];
+                        // TODO: validate NAL unit header, 2..
+                        return Ok(sps::seq_parameter_set(&mut BitReader::new(&bytes[2..]))?);
                     }
                 }
             }

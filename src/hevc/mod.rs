@@ -7,13 +7,14 @@ use failure::Error;
 
 mod nal;
 pub mod pps;
-mod sps;
+pub mod sps;
 mod ss;
 mod vps;
 
 use bit::typenum;
 use bit::Bits;
 use hevc::pps::PicParamSet;
+use hevc::sps::SeqParamSet;
 
 #[derive(Copy, Clone, Debug)]
 struct NalUnitHeader {
@@ -31,9 +32,10 @@ const NAL_CRA_NUT: u8 = 21;
 const NAL_RSV_IRAP_VCL22: u8 = 22;
 const NAL_RSV_IRAP_VCL23: u8 = 23;
 
+pub const NAL_SPS_NUT: u8 = 33;
 pub const NAL_PPS_NUT: u8 = 34;
 
-pub fn dump<R: Read>(mut from: R, pps: &PicParamSet) -> Result<(), Error> {
+pub fn dump<R: Read>(mut from: R, pps: &PicParamSet, sps: &SeqParamSet) -> Result<(), Error> {
     let nal_unit_header = nal_unit_header(&mut from)?;
 
     ensure!(
@@ -45,7 +47,7 @@ pub fn dump<R: Read>(mut from: R, pps: &PicParamSet) -> Result<(), Error> {
     let mut v = Vec::new();
     from.read_to_end(&mut v)?;
 
-    ss::slice_segment_header(nal_unit_header.unit_type, &mut BitReader::new(&v), pps)?;
+    ss::slice_segment_header(nal_unit_header.unit_type, &mut BitReader::new(&v), pps, sps)?;
 
     println!("{:?}", nal_unit_header);
     Ok(())

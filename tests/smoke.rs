@@ -21,7 +21,8 @@ fn road() -> Result<(), Error> {
     assert_eq!(&bytes[333..], data.as_slice());
 
     let pps = heif.find_pps(item)?;
+    let sps = heif.find_sps(item)?;
 
-    println!("{:?}", heifers::hevc::dump(Cursor::new(data), &pps)?);
+    println!("{:?}", heifers::hevc::dump(Cursor::new(data), &pps, &sps)?);
     Ok(())
 }
