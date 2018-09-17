@@ -4,7 +4,7 @@ use std::io::Read;
 use failure::Error;
 use twoway;
 
-struct NalReader<R: Read> {
+pub struct NalReader<R: Read> {
     inner: Bytes<R>,
 }
 

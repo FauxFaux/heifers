@@ -13,6 +13,7 @@ use cast::usize;
 use failure::Error;
 
 use hevc;
+use hevc::nal::NalReader;
 use hevc::pps;
 use hevc::sps;
 use mpeg;
@@ -178,7 +179,11 @@ impl Heif {
                     if hevc::NAL_SPS_NUT == nal.completeness_and_nal_unit_type {
                         ensure!(1 == nal.units.len(), "expecting only one unit");
                         let bytes = &nal.units[0];
+                        let bytes = NalReader::new(io::Cursor::new(bytes))
+                            .read_nal()?
+                            .ok_or_else(|| format_err!("NalReader didn't"))?;
                         // TODO: validate NAL unit header, 2..
+                        // TODO: validate no more NALs
                         return Ok(sps::seq_parameter_set(&mut BitReader::new(&bytes[2..]))?);
                     }
                 }

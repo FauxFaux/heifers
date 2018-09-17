@@ -198,9 +198,12 @@ pub fn slice_segment_header(
     {
         let num_entry_point_offsets = read_uvlc(from)?;
         if num_entry_point_offsets > 0 {
-            let offset_len_minus1 = read_uvlc(from)?;
+            let offset_len = read_uvlc(from)? + 1;
+
+            ensure!(offset_len <= 32, "offset_len too long: {}", offset_len);
+
             for i in 0..num_entry_point_offsets {
-                bail!("entry_point_offset_minus1[i] u(v)")
+                let entry_point_offset_minus1 = from.read_u32(u8(offset_len).unwrap())?;
             }
         }
     }
@@ -214,7 +217,15 @@ pub fn slice_segment_header(
         }
     }
 
-    bail!("byte_alignment()");
+    byte_alignment(from)?;
 
+    Ok(())
+}
+
+fn byte_alignment(from: &mut BitReader) -> Result<(), Error> {
+    ensure!(from.read_bool()?, "byte_alignment requires high bit");
+    while !from.is_aligned(1) {
+        ensure!(!from.read_bool()?, "byte_alignment requires low bit");
+    }
     Ok(())
 }
