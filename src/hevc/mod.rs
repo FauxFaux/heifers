@@ -5,6 +5,7 @@ use byteorder::ReadBytesExt;
 use byteorder::BE;
 use failure::Error;
 
+pub mod ct;
 pub mod nal;
 pub mod pps;
 pub mod sps;
@@ -46,8 +47,11 @@ pub fn dump<R: Read>(mut from: R, pps: &PicParamSet, sps: &SeqParamSet) -> Resul
 
     let mut v = Vec::new();
     from.read_to_end(&mut v)?;
+    let mut read = BitReader::new(&v);
 
-    ss::slice_segment_header(nal_unit_header.unit_type, &mut BitReader::new(&v), pps, sps)?;
+    ss::slice_segment_header(nal_unit_header.unit_type, &mut read, pps, sps)?;
+
+    assert_eq!(56, read.position());
 
     println!("{:?}", nal_unit_header);
     Ok(())

@@ -15,31 +15,59 @@ const SLICE_TYPE_B: u8 = 0;
 const SLICE_TYPE_P: u8 = 1;
 const SLICE_TYPE_I: u8 = 2;
 
+bitflags! {
+    #[derive(Default)]
+    pub struct Flags: u32 {
+        const FIRST_SLICE_SEGMENT_IN_PIC              = 1 <<  0;
+        const NO_OUTPUT_OF_PRIOR_PICS                 = 1 <<  1;
+        const DEPENDENT_SLICE_SEGMENT                 = 1 <<  2;
+        const PIC_OUTPUT                              = 1 <<  3;
+        const SHORT_TERM_REF_PIC_SET_SPS              = 1 <<  4;
+        const USED_BY_CURR_PIC_LT                     = 1 <<  5;
+        const DELTA_POC_MSB_PRESENT                   = 1 <<  6;
+        const SLICE_TEMPORAL_MVP_ENABLED              = 1 <<  7;
+        const SLICE_SAO_LUMA                          = 1 <<  8;
+        const SLICE_SAO_CHROMA                        = 1 <<  9;
+        const NUM_REF_IDX_ACTIVE_OVERRIDE             = 1 << 10;
+        const MVD_L1_ZERO                             = 1 << 11;
+        const CABAC_INIT                              = 1 << 12;
+        const COLLOCATED_FROM_L0                      = 1 << 13;
+        const DEBLOCKING_FILTER_OVERRIDE              = 1 << 14;
+        const SLICE_DEBLOCKING_FILTER_DISABLED        = 1 << 15;
+        const SLICE_LOOP_FILTER_ACROSS_SLICES_ENABLED = 1 << 16;
+    }
+}
+
+pub struct SliceSegmentHeader {
+    pub flags: Flags,
+}
+
 pub fn slice_segment_header(
     nal_unit_type: u8,
     from: &mut BitReader,
     pps: &PicParamSet,
     sps: &SeqParamSet,
-) -> Result<(), Error> {
-    let first_slice_segment_in_pic_flag = from.read_bool()?;
+) -> Result<SliceSegmentHeader, Error> {
+    let mut flags = Flags::default();
+
+    flags |= read_flag(from, Flags::FIRST_SLICE_SEGMENT_IN_PIC)?;
 
     if nal_unit_type >= super::NAL_BLA_W_LP && nal_unit_type <= super::NAL_RSV_IRAP_VCL23 {
-        let no_output_of_prior_pics_flag = from.read_bool()?;
+        flags |= read_flag(from, Flags::NO_OUTPUT_OF_PRIOR_PICS)?;
     }
 
-    let mut dependent_slice_segment_flag = false;
     let slice_pic_parameter_set_id = read_uvlc(from)?;
-    if !first_slice_segment_in_pic_flag {
+    if !flags.contains(Flags::FIRST_SLICE_SEGMENT_IN_PIC) {
         if pps
             .flags
             .contains(pps::Flags::DEPENDENT_SLICE_SEGMENTS_ENABLED)
         {
-            dependent_slice_segment_flag = from.read_bool()?;
+            flags |= read_flag(from, Flags::DEPENDENT_SLICE_SEGMENT)?;
         }
         let slice_segment_address = read_uvlc(from)?;
     }
 
-    if !dependent_slice_segment_flag {
+    if !flags.contains(Flags::DEPENDENT_SLICE_SEGMENT) {
         let _slice_reserved_flag = from.read_u64(pps.num_extra_slice_header_bits)?;
         let slice_type = {
             let val = read_uvlc(from)?;
@@ -47,17 +75,16 @@ pub fn slice_segment_header(
             u8(val).unwrap()
         };
         if pps.flags.contains(pps::Flags::OUTPUT_FLAG_PRESENT) {
-            let pic_output_flag = from.read_bool()?;
+            flags |= read_flag(from, Flags::PIC_OUTPUT)?;
         }
         if sps.flags.contains(sps::Flags::SEPARATE_COLOUR_PLANE) {
             let colour_plane_id = from.read_u8(2)?;
         }
-        let mut slice_temporal_mvp_enabled_flag = false;
         if nal_unit_type != super::NAL_IDR_W_RADL && nal_unit_type != super::NAL_IDR_N_LP {
             let slice_pic_order_cnt_lsb =
                 from.read_u64(sps.log2_max_pic_order_cnt_lsb_minus4 + 4)?;
-            let short_term_ref_pic_set_sps_flag = from.read_bool()?;
-            if !short_term_ref_pic_set_sps_flag {
+            flags |= read_flag(from, Flags::SHORT_TERM_REF_PIC_SET_SPS)?;
+            if !flags.contains(Flags::SHORT_TERM_REF_PIC_SET_SPS) {
                 bail!("short_term_ref_pic_set(num_short_term_ref_pic_sets)");
             } else if sps.num_short_term_ref_pic_sets > 1 {
                 bail!("short_term_ref_pic_set_idx u(v)")
@@ -104,24 +131,22 @@ pub fn slice_segment_header(
                 }
             }
             if sps.flags.contains(sps::Flags::SPS_TEMPORAL_MVP_ENABLED) {
-                slice_temporal_mvp_enabled_flag = from.read_bool()?;
+                flags |= read_flag(from, Flags::SLICE_TEMPORAL_MVP_ENABLED)?;
             }
         }
-        let mut slice_sao_luma_flag = false;
-        let mut slice_sao_chroma_flag = false;
         if sps
             .flags
             .contains(sps::Flags::SAMPLE_ADAPTIVE_OFFSET_ENABLED)
         {
-            slice_sao_luma_flag = from.read_bool()?;
-            slice_sao_chroma_flag = from.read_bool()?;
+            flags |= read_flag(from, Flags::SLICE_SAO_LUMA)?;
+            flags |= read_flag(from, Flags::SLICE_SAO_CHROMA)?;
         }
 
         if slice_type == SLICE_TYPE_P || slice_type == SLICE_TYPE_B {
             let mut num_ref_idx_l0_active_minus1 = unimplemented!("default value");
             let mut num_ref_idx_l1_active_minus1 = unimplemented!("default value");
-            let num_ref_idx_active_override_flag = from.read_bool()?;
-            if num_ref_idx_active_override_flag {
+            flags |= read_flag(from, Flags::NUM_REF_IDX_ACTIVE_OVERRIDE)?;
+            if flags.contains(Flags::NUM_REF_IDX_ACTIVE_OVERRIDE) {
                 num_ref_idx_l0_active_minus1 = read_uvlc(from)?;
                 if slice_type == SLICE_TYPE_B {
                     num_ref_idx_l1_active_minus1 = read_uvlc(from)?;
@@ -133,14 +158,14 @@ pub fn slice_segment_header(
                 bail!("ref_pic_lists_modification()")
             }
             if slice_type == SLICE_TYPE_B {
-                let mvd_l1_zero_flag = from.read_bool()?;
+                flags |= read_flag(from, Flags::MVD_L1_ZERO)?;
             }
             if pps.flags.contains(pps::Flags::CABAC_INIT_PRESENT) {
-                let cabac_init_flag = from.read_bool()?;
+                flags |= read_flag(from, Flags::CABAC_INIT)?;
             }
 
             let mut collocated_from_l0_flag = false;
-            if slice_temporal_mvp_enabled_flag {
+            if flags.contains(Flags::SLICE_TEMPORAL_MVP_ENABLED) {
                 if slice_type == SLICE_TYPE_B {
                     collocated_from_l0_flag = from.read_bool()?;
                 }
@@ -166,18 +191,16 @@ pub fn slice_segment_header(
             let slice_cr_qp_offset = read_uvlc(from)?; // TODO: signed
         }
 
-        let mut deblocking_filter_override_flag = false;
         if pps
             .flags
             .contains(pps::Flags::DEBLOCKING_FILTER_OVERRIDE_ENABLED)
         {
-            deblocking_filter_override_flag = from.read_bool()?;
+            flags |= read_flag(from, Flags::DEBLOCKING_FILTER_OVERRIDE)?;
         }
 
-        let mut slice_deblocking_filter_disabled_flag = false;
-        if deblocking_filter_override_flag {
-            slice_deblocking_filter_disabled_flag = from.read_bool()?;
-            if !slice_deblocking_filter_disabled_flag {
+        if flags.contains(Flags::DEBLOCKING_FILTER_OVERRIDE) {
+            flags |= read_flag(from, Flags::SLICE_DEBLOCKING_FILTER_DISABLED)?;
+            if !flags.contains(Flags::SLICE_DEBLOCKING_FILTER_DISABLED) {
                 let slice_beta_offset_div2 = read_uvlc(from)?; // TODO: signed
                 let slice_tc_offset_div2 = read_uvlc(from)?; // TODO: signed
             }
@@ -185,11 +208,11 @@ pub fn slice_segment_header(
         if pps
             .flags
             .contains(pps::Flags::PPS_LOOP_FILTER_ACROSS_SLICES_ENABLED)
-            && (slice_sao_luma_flag
-                || slice_sao_chroma_flag
-                || !slice_deblocking_filter_disabled_flag)
+            && (flags.contains(Flags::SLICE_SAO_LUMA)
+                || flags.contains(Flags::SLICE_SAO_CHROMA)
+                || !flags.contains(Flags::SLICE_DEBLOCKING_FILTER_DISABLED))
         {
-            let slice_loop_filter_across_slices_enabled_flag = from.read_bool()?;
+            flags |= read_flag(from, Flags::SLICE_LOOP_FILTER_ACROSS_SLICES_ENABLED)?;
         }
     }
 
@@ -219,7 +242,7 @@ pub fn slice_segment_header(
 
     byte_alignment(from)?;
 
-    Ok(())
+    Ok(SliceSegmentHeader { flags })
 }
 
 fn byte_alignment(from: &mut BitReader) -> Result<(), Error> {
@@ -228,4 +251,13 @@ fn byte_alignment(from: &mut BitReader) -> Result<(), Error> {
         ensure!(!from.read_bool()?, "byte_alignment requires low bit");
     }
     Ok(())
+}
+
+#[inline]
+fn read_flag(from: &mut BitReader, flag: Flags) -> Result<Flags, Error> {
+    Ok(if from.read_bool()? {
+        flag
+    } else {
+        Flags::default()
+    })
 }
