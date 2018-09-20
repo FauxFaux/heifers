@@ -5,6 +5,7 @@ use std::io;
 use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
+use std::io::Write;
 
 use bitreader::BitReader;
 use cast::u32;
@@ -142,6 +143,38 @@ impl Heif {
             current_extent: 0,
             current_pos: 0,
         })
+    }
+
+    pub fn bit_stream<R: Read + Seek, W: Write>(
+        &self,
+        item: u32,
+        mut from: R,
+        mut into: W,
+    ) -> Result<(), Error> {
+        for (ids, prop) in &self.props {
+            if !ids.contains(&item) {
+                continue;
+            }
+
+            if let Property::HvcCodecSettings(hvcc) = prop {
+                for nal in &hvcc.nals {
+                    // still not confident on this nested array thing
+                    debug_assert_eq!(1, nal.units.len());
+                    for unit in &nal.units {
+                        into.write_all(&[0, 0, 0, 1])?;
+                        into.write_all(unit)?;
+                    }
+                }
+            }
+        }
+
+        into.write_all(&[0, 0, 0, 1])?;
+        let mut data_item = self.open_item_data(from, item)?;
+        // length prefix?
+        data_item.read_exact(&mut [0u8; 4])?;
+        io::copy(&mut data_item, &mut into)?;
+
+        Ok(())
     }
 
     pub fn find_pps(&self, item: u32) -> Result<pps::PicParamSet, Error> {
