@@ -5,6 +5,7 @@ use byteorder::ReadBytesExt;
 use byteorder::BE;
 use failure::Error;
 
+mod cabac;
 pub mod ct;
 pub mod nal;
 pub mod pps;
